@@ -48,7 +48,6 @@ export class AtemService {
     // handle state changes here
   }
 
-
   async setProgram(ipAddress: string, input: number, me?: number) {
     const device = this.getDevice(ipAddress);
     await device.atem.changeProgramInput(input, me);
@@ -59,6 +58,18 @@ export class AtemService {
     await device.atem.changePreviewInput(input, me);
   }
 
+  async transition(ipAddress: string, input: number) {
+    const device = this.getDevice(ipAddress);
+    await device.atem.changePreviewInput(input);
+    await device.atem.autoTransition();
+  }
+
+  async setPiP(ipAddress: string) {
+    const device = this.getDevice(ipAddress);
+    await device.atem.setSuperSourceBorder({ borderEnabled: false });
+    // await device.atem.setSuperSourceBoxSettings({  })
+    // await device.atem.setSuperSourceProperties({ })
+  }
 
   async disconnect(ipAddress) {
     const device = this.getDevice(ipAddress);

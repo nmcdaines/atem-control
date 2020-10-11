@@ -4,4 +4,5 @@ export interface IAtem {
   ipAddress: string;
   atem: Atem;
   status: 'connecting' | 'connected' | 'disconnected';
+  reconnect?: boolean;
 }
