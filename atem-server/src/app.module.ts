@@ -3,10 +3,12 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppGateway } from './app.gateway' 
 import { SettingsModule } from './settings/settings.module';
+import { NetworkModule } from './network/network.module';
+import { AtemService } from './atem/atem.service';
 
 @Module({
-  imports: [SettingsModule],
+  imports: [SettingsModule, NetworkModule],
   controllers: [AppController],
-  providers: [AppService, AppGateway],
+  providers: [AppService, AppGateway, AtemService],
 })
 export class AppModule {}

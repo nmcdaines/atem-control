@@ -26,6 +26,9 @@
     "@nestjs/platform-express": "^7.0.0",
     "@nestjs/platform-socket.io": "^7.4.4",
     "@nestjs/websockets": "^7.4.4",
+    "@network-utils/arp-lookup": "^1.3.4",
+    "atem-connection": "^2.1.0",
+    "oui": "^11.0.38",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^6.5.4"
