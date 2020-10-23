@@ -3,12 +3,28 @@ import { promises } from 'dns';
 // import find from 'local-devices';
 // import oui from 'oui';
 
+
+
 import { default as arp, IArpTableRow } from '@network-utils/arp-lookup';
+
+import arpscan = require('arpscan/promise');
+
+interface IArpObject {
+  ip: string;
+  mac: string;
+  timestamp: string;
+}
 
 @Injectable()
 export class NetworkService {
   async discover() {
-    return await arp.getTable()
+    return new Promise<any>((resolve, reject) => {
+        arpscan()
+            .then(resolve)
+            .catch(reject);
+    });
+
+    // return await arp.getTable()
   }
 
   private isBlackMagic(row: IArpTableRow) {

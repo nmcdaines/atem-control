@@ -1,0 +1,16 @@
+FROM balenalib/%%BALENA_MACHINE_NAME%%-node:10-stretch-run
+RUN install_packages arp-scan
+
+WORKDIR /usr/src/app
+COPY package.json package.json
+
+#RUN JOBS=MAX npm install --production --unsafe-perm && npm cache verify && rm -rf /tmp/*
+
+RUN npm install
+COPY . ./
+RUN npm run build
+
+#ENV UDEV=1
+
+#EXPOSE 3000
+CMD ["npm", "run", "start:prod"]
