@@ -15,6 +15,37 @@ export class SettingsGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('AppGateway');
 
+  @SubscribeMessage('device:create')
+  handleDeviceCreate(client: Socket, payload: string) {
+
+  }
+
+  @SubscribeMessage('device:update')
+  handleDeviceUpdate(client: Socket, payload: string) {
+
+  }
+
+  @SubscribeMessage('device:delete')
+  handleDeviceDelete(client: Socket, payload: string) {
+
+  }
+
+  @SubscribeMessage('initialstate:create')
+  handleInitialStateCreate(client: Socket, payload: string) {
+
+  }
+
+  @SubscribeMessage('initialstate:update')
+  handleInitialStateUpdate(client: Socket, payload: string) {
+
+  }
+
+  @SubscribeMessage('initialstate:delete')
+  handleInitialStateDelete(client: Socket, payload: string) {
+
+  }
+
+
   afterInit(server: Server) {
     this.logger.log('Init');
   }

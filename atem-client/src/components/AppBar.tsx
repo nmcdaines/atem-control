@@ -5,6 +5,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const useStyles = makeStyles((theme: Theme) =>
     createStyles({
+        root: {
+          zIndex: 2,
+          transform: 'translate(0px)'
+        },
         title: {
             flexGrow: 1,
         },
@@ -14,6 +18,12 @@ const useStyles = makeStyles((theme: Theme) =>
             height: 10,
             width: 10,
             marginRight: 10,
+        },
+        actionArea: {
+            flexGrow: 1,
+            textAlign: 'right',
+            display: 'flex',
+            justifyContent: 'flex-end',
         }
     })
 );
@@ -22,14 +32,26 @@ export default function () {
     const classes = useStyles();
 
     return (
-        <AppBar position="static">
+        <AppBar position="static" className={classes.root}>
             <Toolbar>
                 <Typography variant="h6" className={classes.title}>
                     ATEM Control
                 </Typography>
 
-                <span className={classes.connection} />
-                <Button color="inherit">Connect</Button>
+                <div>
+                    <Button color="inherit">SURFACE</Button>
+                    <Button color="inherit">SHORTCUTS</Button>
+                    <Button color="inherit">SETTINGS</Button>
+                    <Button color="inherit">LIVESTREAM</Button>
+                </div>
+
+                <div className={classes.actionArea}>
+                    <Button color="inherit">
+                        <span className={classes.connection} />
+                        Connect
+                    </Button>
+                </div>
+
             </Toolbar>
         </AppBar>
     )

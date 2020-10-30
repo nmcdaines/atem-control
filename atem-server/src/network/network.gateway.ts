@@ -6,4 +6,5 @@ export class NetworkGateway {
   handleMessage(client: any, payload: any): string {
     return 'Hello world!';
   }
+
 }

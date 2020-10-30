@@ -73,3 +73,79 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
   Nest is [MIT licensed](LICENSE).
+
+```
+ATEM Control should have 2 different routes
+* settings
+  * ip address (with find)
+  * initial state
+  * macros
+
+----- SETTINGS OBJECT -----
+    {
+        device: [
+            { id: 'xxx', ipAddress: '192.168.0.100', name: 'ATEM Mini Pro ISO' },
+        ],
+        initialState: [
+            { deviceId: 'xxx', command: '', value: '', order: 0, delay: 0 },
+        ],
+        macros: [
+            { id: 'xxx', name: 'nnn', steps: [
+                { order: 0, delay: 0, command: '', value: '' }
+            ] }
+        ],
+    }
+-----
+
+* shortcuts / n
+  * item
+    * title
+    * color
+    * action
+* livestream
+    * key
+    * start/stop
+
+
+----- COMMANDS -----
+SET.[PREVIEW|PROGRAM]: INPUT
+SET.DVE.[LIVE|A|B][X|Y|WIDTH|HEIGHT]: VALUE
+TRANSITION: [AUTO|CUT]
+
+[ON|OFF]: [DVE|BROADCAST]
+
+SET.[BROADCAST].[KEY|URL]: VALUE
+
+MACRO: VALUE (ID)
+-----
+
+
+
+-------------------------------------------------------------------------------------------------
+ATEM Control                 SURFACE  SHORTCUTS  SETTINGS  LIVESTREAM                     CONNECT
+-------------------------------------------------------------------------------------------------
+
+  +-------------------+   +-------------------+   +-------------------+   +-------------------+
+  | 1                 |   | 2                 |   | 3                 |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  +-------------------+   +-------------------+   +-------------------+   +-------------------+
+
+  +-------------------+   +-------------------+   +-------------------+   +-------------------+
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  +-------------------+   +-------------------+   +-------------------+   +-------------------+
+
+  +-------------------+   +-------------------+   +-------------------+   +-------------------+
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  |                   |   |                   |   |                   |   |                   |
+  +-------------------+   +-------------------+   +-------------------+   +-------------------+
+```

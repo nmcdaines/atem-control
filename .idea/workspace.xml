@@ -20,54 +20,57 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="540b02d6-515e-4e92-95e6-cfc882479295" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.dockerignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/atem-control.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/aws.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/_package.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/.dockerignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/Dockerfile.template" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/package.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/public/favicon.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/public/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/public/logo192.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/public/logo512.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/public/manifest.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/public/robots.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/App.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/App.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/App.test.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/index.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/index.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/logo.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/serviceWorker.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/setupTests.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/yarn.lock" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-client/src/components/SettingsNavigation.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/docker-compose.test.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/docker.env" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.module.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/src/core/ICommand.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/src/core/actions/index.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/src/livestream/livestream.entity.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/src/macros/macros.gateway.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/yarn.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/src/components/AppBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/components/AppBar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/yarn.lock" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/yarn.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atem-server/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atem-server/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/network/network.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/network/network.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/app.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/atem/atem.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/macros/macros.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/macros/macros.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/network/network.gateway.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/network/network.gateway.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/settings/settings.gateway.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/settings/settings.gateway.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="tsconfig.json" />
+        <option value="TypeScript File" />
+        <option value="TypeScript JSX File" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="ProjectId" id="1izTQAa0x3H42210XMb2V5V0SlB" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showExcludedFiles" value="false" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
@@ -78,7 +81,8 @@
     <property name="node.js.path.for.package.eslint" value="project" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
     <property name="nodejs_package_manager_path" value="npm" />
-    <property name="ts.external.directory.path" value="$PROJECT_DIR$/atem-server/node_modules/typescript/lib" />
+    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
+    <property name="ts.external.directory.path" value="$PROJECT_DIR$/atem-client/node_modules/typescript/lib" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
   <component name="RecentsManager">
@@ -100,7 +104,10 @@
       <workItem from="1602909406852" duration="12628000" />
       <workItem from="1602968012810" duration="20000" />
       <workItem from="1602977961206" duration="4190000" />
-      <workItem from="1603429175434" duration="2320000" />
+      <workItem from="1603429175434" duration="19624000" />
+      <workItem from="1603591825652" duration="9025000" />
+      <workItem from="1603778527432" duration="3598000" />
+      <workItem from="1604040164956" duration="4793000" />
     </task>
     <servers />
   </component>
@@ -119,23 +126,66 @@
     </option>
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
+  <component name="VcsManagerConfiguration">
+    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+  </component>
   <component name="WindowStateProjectService">
+    <state x="0" y="23" width="1680" height="1027" key="#Live_Templates" timestamp="1603524927543">
+      <screen x="0" y="23" width="1680" height="1027" />
+    </state>
+    <state x="635" y="-1671" width="1535" height="1310" key="#Live_Templates/0.23.1680.1027/-1193.-2137.3840.2137@-1193.-2137.3840.2137" timestamp="1603499005276" />
+    <state x="0" y="23" width="1680" height="1027" key="#Live_Templates/0.23.1680.1027@0.23.1680.1027" timestamp="1603524927543" />
     <state x="404" y="386" key="#Notifications" timestamp="1602910757628">
       <screen x="0" y="23" width="2560" height="1360" />
     </state>
     <state x="404" y="386" key="#Notifications/0.23.2560.1360@0.23.2560.1360" timestamp="1602910757628" />
-    <state x="550" y="243" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1602934097655">
-      <screen x="0" y="23" width="1680" height="970" />
+    <state x="546" y="212" key="#TypeScript" timestamp="1604046907888">
+      <screen x="0" y="23" width="1680" height="1027" />
     </state>
+    <state x="546" y="212" key="#TypeScript/0.23.1680.1027@0.23.1680.1027" timestamp="1604046907888" />
+    <state x="550" y="256" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1603443457259">
+      <screen x="0" y="23" width="1680" height="1027" />
+    </state>
+    <state x="550" y="256" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603443457259" />
     <state x="550" y="243" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1680.970@0.23.1680.970" timestamp="1602934097655" />
-    <state x="394" y="364" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1602910013593">
-      <screen x="0" y="23" width="2560" height="1360" />
+    <state x="259" y="281" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1603594078478">
+      <screen x="0" y="23" width="1680" height="1027" />
     </state>
+    <state x="259" y="281" key="#com.intellij.fileTypes.FileTypeChooser/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603594078478" />
     <state x="394" y="364" key="#com.intellij.fileTypes.FileTypeChooser/0.23.2560.1360@0.23.2560.1360" timestamp="1602910013593" />
-    <state x="956" y="318" width="670" height="732" key="search.everywhere.popup" timestamp="1602993513804">
-      <screen x="0" y="0" width="1680" height="1050" />
+    <state x="653" y="259" key="#com.intellij.ide.util.MemberChooser" timestamp="1603782262135">
+      <screen x="0" y="23" width="1680" height="1027" />
+    </state>
+    <state x="653" y="259" key="#com.intellij.ide.util.MemberChooser/0.23.1680.1027@0.23.1680.1027" timestamp="1603782262135" />
+    <state x="328" y="146" key="SettingsEditor" timestamp="1604046604083">
+      <screen x="0" y="23" width="1680" height="1027" />
+    </state>
+    <state x="912" y="-1259" key="SettingsEditor/0.23.1680.1027/-1193.-2137.3840.2137@-1193.-2137.3840.2137" timestamp="1603499661605" />
+    <state x="328" y="146" key="SettingsEditor/0.23.1680.1027@0.23.1680.1027" timestamp="1604046604083" />
+    <state x="299" y="23" width="1333" height="833" key="dock-window-1" timestamp="1604040714358">
+      <screen x="0" y="23" width="1680" height="1027" />
+    </state>
+    <state x="1266" y="-1122" width="1333" height="833" key="dock-window-1/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1604040329055" />
+    <state x="299" y="23" width="1333" height="833" key="dock-window-1/0.23.1680.1027@0.23.1680.1027" timestamp="1604040714358" />
+    <state x="0" y="23" width="1333" height="1008" key="dock-window-2" timestamp="1604040714358">
+      <screen x="0" y="23" width="1680" height="1027" />
+    </state>
+    <state x="-212" y="-1199" width="1333" height="1008" key="dock-window-2/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1604040329055" />
+    <state x="0" y="23" width="1333" height="1008" key="dock-window-2/0.23.1680.1027@0.23.1680.1027" timestamp="1604040714358" />
+    <state x="538" y="169" width="604" height="735" key="find.popup" timestamp="1603595727598">
+      <screen x="0" y="23" width="1680" height="1027" />
+    </state>
+    <state x="538" y="169" width="604" height="735" key="find.popup/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603595727598" />
+    <state x="505" y="248" key="run.anything.popup" timestamp="1603785575589">
+      <screen x="0" y="23" width="1680" height="1027" />
+    </state>
+    <state x="505" y="248" key="run.anything.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1603785575589" />
+    <state x="956" y="334" width="670" height="716" key="search.everywhere.popup" timestamp="1603782537515">
+      <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="956" y="318" width="670" height="732" key="search.everywhere.popup/0.0.1680.1050@0.0.1680.1050" timestamp="1602993513804" />
+    <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603598658916" />
+    <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1603782537515" />
     <state x="956" y="317" width="670" height="676" key="search.everywhere.popup/0.23.1680.970@0.23.1680.970" timestamp="1602934096279" />
   </component>
 </project>

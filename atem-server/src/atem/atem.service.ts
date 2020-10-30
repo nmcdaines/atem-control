@@ -24,6 +24,7 @@ export class AtemService {
   }
 
   async connect(ipAddress: string) {
+    console.log('request connect', ipAddress);
     if (this.getDevice(ipAddress)) {
       return { error: 'Device already exists' }
     }
@@ -33,6 +34,8 @@ export class AtemService {
       atem: new Atem(),
       status: 'connecting',
     };
+
+    this.devices.push(device);
     
     device.atem.on('connected', this.onConnected(ipAddress));
     device.atem.on('disconnected', this.onDisconnected(ipAddress));
@@ -42,7 +45,10 @@ export class AtemService {
   }
 
   // TODO: emit event for [on] connect/disconnect
-  private onConnected = (ipAddress) => () => this.updateDevice(ipAddress, { status: 'connected' });
+  private onConnected = (ipAddress) => () => {
+    console.log('connected to ' + ipAddress + 'successful');
+    this.updateDevice(ipAddress, { status: 'connected' });
+  }
   private onDisconnected = (ipAddress) => () => this.updateDevice(ipAddress, { status: 'disconnected' });
   private onStateChange = (ipAddress) => (state: AtemState, pathToChange) => {
     // handle state changes here
@@ -58,18 +64,31 @@ export class AtemService {
     await device.atem.changePreviewInput(input, me);
   }
 
-  async transition(ipAddress: string, input: number) {
+  async transition(ipAddress: string, input: number, mode?: 'auto' | 'cut') {
     const device = this.getDevice(ipAddress);
     await device.atem.changePreviewInput(input);
-    await device.atem.autoTransition();
+    const transitionMenthod = mode === 'cut' ? 'cut' : 'autoTransition';
+    await device.atem[transitionMenthod];
   }
 
-  async setPiP(ipAddress: string) {
-    const device = this.getDevice(ipAddress);
-    await device.atem.setSuperSourceBorder({ borderEnabled: false });
-    // await device.atem.setSuperSourceBoxSettings({  })
-    // await device.atem.setSuperSourceProperties({ })
-  }
+  // async setPiP(ipAddress: string) {
+  //   const device = this.getDevice(ipAddress);
+  //
+  //
+  //
+  //   // device.atem.setDVETransitionSettings()
+  //   // device.atem.setSuperSourceBoxSettings()
+  //   // device.atem.setUpstreamKeyerDVESettings()
+  //   // device.atem.setStreamingService()
+  //   device.atem.setSuperSourceProperties
+  // }
+  //
+  // async setPiP(ipAddress: string) {
+  //   const device = this.getDevice(ipAddress);
+  //   await device.atem.setSuperSourceBorder({ borderEnabled: false });
+  //   // await device.atem.setSuperSourceBoxSettings({  })
+  //   // await device.atem.setSuperSourceProperties({ })
+  // }
 
   async disconnect(ipAddress) {
     const device = this.getDevice(ipAddress);
