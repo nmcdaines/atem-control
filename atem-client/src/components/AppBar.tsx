@@ -2,6 +2,7 @@ import React from "react";
 
 import { createStyles, makeStyles, Theme, AppBar, Toolbar, Typography, Button} from "@material-ui/core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Link } from "react-router-dom";
 
 const useStyles = makeStyles((theme: Theme) =>
     createStyles({
@@ -39,10 +40,34 @@ export default function () {
                 </Typography>
 
                 <div>
-                    <Button color="inherit">SURFACE</Button>
-                    <Button color="inherit">SHORTCUTS</Button>
-                    <Button color="inherit">SETTINGS</Button>
-                    <Button color="inherit">LIVESTREAM</Button>
+                    <Button
+                      color="inherit"
+                      component={Link}
+                      to="/"
+                    >
+                      SURFACE
+                    </Button>
+                    <Button
+                      color="inherit"
+                      component={Link}
+                      to="/shortcuts"
+                    >
+                      SHORTCUTS
+                    </Button>
+                    <Button
+                      color="inherit"
+                      component={Link}
+                      to="/settings"
+                    >
+                      SETTINGS
+                    </Button>
+                    <Button
+                      color="inherit"
+                      component={Link}
+                      to="/livestream"
+                    >
+                      LIVESTREAM
+                    </Button>
                 </div>
 
                 <div className={classes.actionArea}>

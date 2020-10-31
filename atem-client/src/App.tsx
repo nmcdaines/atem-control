@@ -10,8 +10,8 @@ import io from 'socket.io-client';
 
 import {
   BrowserRouter as Router,
-  // Switch,
-  // Route,
+  Switch,
+  Route,
   // Link
 } from "react-router-dom";
 
@@ -20,15 +20,20 @@ const socket = io('ws://localhost:3000', { });
 function App() {
   return (
     <div className="App">
-      <AppBar />
-
       <Router>
+        <AppBar />
+
+        <Switch>
+          <Route path="/settings">
+            <SettingsNavigation />
+          </Route>
+        </Switch>
 
 
 
       </Router>
 
-      <SettingsNavigation />
+
 
 
         <button onClick={() => {

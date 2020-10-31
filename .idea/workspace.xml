@@ -20,28 +20,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="540b02d6-515e-4e92-95e6-cfc882479295" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/atem-client/src/components/SettingsNavigation.tsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/docker-compose.test.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/docker.env" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.module.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/core/ICommand.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/core/actions/index.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/livestream/livestream.entity.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/macros/macros.gateway.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/yarn.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atem-client/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/App.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atem-client/src/components/AppBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/components/AppBar.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/yarn.lock" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/yarn.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/app.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/atem/atem.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/macros/macros.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/macros/macros.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/network/network.gateway.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/network/network.gateway.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/settings/settings.gateway.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/settings/settings.gateway.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -81,7 +62,7 @@
     <property name="node.js.path.for.package.eslint" value="project" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
     <property name="nodejs_package_manager_path" value="npm" />
-    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
+    <property name="settings.editor.selected.configurable" value="preferences.keymap" />
     <property name="ts.external.directory.path" value="$PROJECT_DIR$/atem-client/node_modules/typescript/lib" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
@@ -107,7 +88,7 @@
       <workItem from="1603429175434" duration="19624000" />
       <workItem from="1603591825652" duration="9025000" />
       <workItem from="1603778527432" duration="3598000" />
-      <workItem from="1604040164956" duration="4793000" />
+      <workItem from="1604040164956" duration="5715000" />
     </task>
     <servers />
   </component>
@@ -157,11 +138,11 @@
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="653" y="259" key="#com.intellij.ide.util.MemberChooser/0.23.1680.1027@0.23.1680.1027" timestamp="1603782262135" />
-    <state x="328" y="146" key="SettingsEditor" timestamp="1604046604083">
+    <state x="328" y="145" key="SettingsEditor" timestamp="1604140884473">
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="912" y="-1259" key="SettingsEditor/0.23.1680.1027/-1193.-2137.3840.2137@-1193.-2137.3840.2137" timestamp="1603499661605" />
-    <state x="328" y="146" key="SettingsEditor/0.23.1680.1027@0.23.1680.1027" timestamp="1604046604083" />
+    <state x="328" y="145" key="SettingsEditor/0.23.1680.1027@0.23.1680.1027" timestamp="1604140884473" />
     <state x="299" y="23" width="1333" height="833" key="dock-window-1" timestamp="1604040714358">
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
