@@ -1,11 +1,5 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
-
-import SettingsNavigation from './components/SettingsNavigation';
-
 import AppBar from './components/AppBar';
-
 import io from 'socket.io-client';
 
 import {
@@ -15,23 +9,30 @@ import {
   // Link
 } from "react-router-dom";
 
+import SurfaceContainer from "./containers/Surface";
+import SettingsContainer from "./containers/Settings";
+import ShortcutsContainer from "./containers/Shortcuts";
+import LivestreamContainer from "./containers/Livestream";
+
+import { SocketProvider } from "./core/SocketContext"
+
 const socket = io('ws://localhost:3000', { });
 
 function App() {
   return (
     <div className="App">
-      <Router>
-        <AppBar />
+      <SocketProvider>
+        <Router>
+          <AppBar />
 
-        <Switch>
-          <Route path="/settings">
-            <SettingsNavigation />
-          </Route>
-        </Switch>
-
-
-
-      </Router>
+          <Switch>
+            <Route path="/shortcuts" component={ShortcutsContainer} />
+            <Route path="/surface" component={SurfaceContainer} />
+            <Route path="/settings" component={SettingsContainer} />
+            <Route path="/livestream" component={LivestreamContainer} />
+          </Switch>
+        </Router>
+      </SocketProvider>
 
 
 
@@ -49,6 +50,9 @@ function App() {
           }}>
               Send message
           </button>
+
+
+
     </div>
   );
 }
