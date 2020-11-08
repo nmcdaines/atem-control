@@ -29,28 +29,26 @@ function Settings() {
         </Route>
       </Grid>
       <Grid item md={9}>
-        <Paper>
-          <Route exact path={path}>
-            <Redirect
-              to={{
-                pathname: `${url}/devices`,
-                state: { from: location }
-              }}
-            />
-          </Route>
-          <Route path={`${path}/devices`}>
-            <SettingsDevices />
-          </Route>
-          <Route path={`${path}/livestream`}>
-            Livestream
-          </Route>
-          <Route path={`${path}/macros`}>
-            Macros
-          </Route>
-          <Route path={`${path}/shortcuts`}>
-            Shortcuts
-          </Route>
-        </Paper>
+        <Route exact path={path}>
+          <Redirect
+            to={{
+              pathname: `${url}/devices`,
+              state: { from: location }
+            }}
+          />
+        </Route>
+        <Route path={`${path}/devices`}>
+          <SettingsDevices />
+        </Route>
+        <Route path={`${path}/livestream`}>
+          Livestream
+        </Route>
+        <Route path={`${path}/macros`}>
+          Macros
+        </Route>
+        <Route path={`${path}/shortcuts`}>
+          Shortcuts
+        </Route>
       </Grid>
     </Grid>
   );

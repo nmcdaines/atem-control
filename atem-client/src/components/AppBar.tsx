@@ -1,7 +1,6 @@
 import React from "react";
 
 import {createStyles, makeStyles, Theme, AppBar, Toolbar, Typography, Button} from "@material-ui/core";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {Link} from "react-router-dom";
 
 const useStyles = makeStyles((theme: Theme) =>

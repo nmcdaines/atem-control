@@ -4,9 +4,10 @@ const SocketStateContext = React.createContext<any>(undefined);
 const SocketDispatchContext = React.createContext<any>(undefined);
 
 const initialState: any = {
-  devices: [{
-
-  }],
+  devices: [
+    { ip: '192.168.1.35', mac: '', name: 'ATEM Mini' },
+    { ip: '192.168.1.36', mac: '', name: 'ATEM Mini 2' },
+  ],
   discovery: [
     { ip: '192.168.0.200', mac: 'xxxxxx' },
     { ip: '192.168.0.201', mac: 'xxxxxx' },

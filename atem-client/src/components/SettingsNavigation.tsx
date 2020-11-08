@@ -6,15 +6,13 @@ import ListItem, {ListItemProps} from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
 import Divider from '@material-ui/core/Divider';
-import InboxIcon from '@material-ui/icons/Inbox';
 import DeviceHubIcon from '@material-ui/icons/DeviceHub';
 import LiveTvIcon from '@material-ui/icons/LiveTv';
-import DraftsIcon from '@material-ui/icons/Drafts';
 import CallToActionIcon from '@material-ui/icons/CallToAction';
 import AppsIcon from '@material-ui/icons/Apps';
 
 
-import { Link, useRouteMatch, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({

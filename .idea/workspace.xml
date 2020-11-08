@@ -20,9 +20,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="540b02d6-515e-4e92-95e6-cfc882479295" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/atem-client/src/components/DeviceCard.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-client/src/core/actions/ActionSetPiP.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-client/src/core/actions/ActionSetPreview.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-client/src/core/actions/ActionSetProgram.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-client/src/core/actions/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/atem-control.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/atem-control.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/App.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atem-client/src/components/AppBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/components/AppBar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/src/components/SettingsNavigation.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/components/SettingsNavigation.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/src/containers/Settings/Settings.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/containers/Settings/Settings.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/src/containers/Settings/SettingsDevices.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/containers/Settings/SettingsDevices.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/src/core/SocketContext.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/core/SocketContext.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,8 +42,8 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="tsconfig.json" />
-        <option value="TypeScript File" />
         <option value="TypeScript JSX File" />
+        <option value="TypeScript File" />
       </list>
     </option>
   </component>
@@ -57,21 +66,25 @@
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="com.intellij.ide.scratch.LRUPopupBuilder$1/New Scratch File" value="TEXT" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/atem-server" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../rentassist" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
     <property name="nodejs_package_manager_path" value="npm" />
     <property name="settings.editor.selected.configurable" value="preferences.keymap" />
-    <property name="ts.external.directory.path" value="$PROJECT_DIR$/atem-client/node_modules/typescript/lib" />
+    <property name="ts.external.directory.path" value="C:\Users\nmcda\projects\atem-control\atem-server\node_modules\typescript\lib" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\nmcda\projects\atem-control\atem-client\src\containers\Surface" />
+      <recent name="C:\Users\nmcda\projects\atem-control\atem-client\src\containers\Shortcuts" />
+      <recent name="C:\Users\nmcda\projects\atem-control\atem-client\src\containers\Settings" />
       <recent name="$PROJECT_DIR$/atem-server" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\nmcda\projects\atem-control\atem-client\src\containers\Livestream" />
+      <recent name="$PROJECT_DIR$" />
     </key>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
@@ -89,6 +102,12 @@
       <workItem from="1603591825652" duration="9025000" />
       <workItem from="1603778527432" duration="3598000" />
       <workItem from="1604040164956" duration="5715000" />
+      <workItem from="1604206601988" duration="3234000" />
+      <workItem from="1604230613229" duration="12765000" />
+      <workItem from="1604579521355" duration="1589000" />
+      <workItem from="1604664645587" duration="203000" />
+      <workItem from="1604664866070" duration="31000" />
+      <workItem from="1604792645497" duration="6226000" />
     </task>
     <servers />
   </component>
@@ -120,27 +139,35 @@
       <screen x="0" y="23" width="2560" height="1360" />
     </state>
     <state x="404" y="386" key="#Notifications/0.23.2560.1360@0.23.2560.1360" timestamp="1602910757628" />
-    <state x="546" y="212" key="#TypeScript" timestamp="1604046907888">
-      <screen x="0" y="23" width="1680" height="1027" />
+    <state x="593" y="216" key="#TypeScript" timestamp="1604209298696">
+      <screen x="0" y="0" width="1824" height="1176" />
     </state>
+    <state x="593" y="216" key="#TypeScript/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604209298696" />
     <state x="546" y="212" key="#TypeScript/0.23.1680.1027@0.23.1680.1027" timestamp="1604046907888" />
     <state x="550" y="256" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1603443457259">
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="550" y="256" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603443457259" />
     <state x="550" y="243" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1680.970@0.23.1680.970" timestamp="1602934097655" />
-    <state x="259" y="281" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1603594078478">
-      <screen x="0" y="23" width="1680" height="1027" />
+    <state x="281" y="295" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1604385010307">
+      <screen x="0" y="0" width="1824" height="1176" />
     </state>
+    <state x="281" y="295" key="#com.intellij.fileTypes.FileTypeChooser/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604385010307" />
     <state x="259" y="281" key="#com.intellij.fileTypes.FileTypeChooser/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603594078478" />
     <state x="394" y="364" key="#com.intellij.fileTypes.FileTypeChooser/0.23.2560.1360@0.23.2560.1360" timestamp="1602910013593" />
-    <state x="653" y="259" key="#com.intellij.ide.util.MemberChooser" timestamp="1603782262135">
-      <screen x="0" y="23" width="1680" height="1027" />
+    <state x="709" y="270" key="#com.intellij.ide.util.MemberChooser" timestamp="1604580406122">
+      <screen x="0" y="0" width="1824" height="1176" />
     </state>
+    <state x="709" y="270" key="#com.intellij.ide.util.MemberChooser/0.0.1824.1176@0.0.1824.1176" timestamp="1604580406122" />
     <state x="653" y="259" key="#com.intellij.ide.util.MemberChooser/0.23.1680.1027@0.23.1680.1027" timestamp="1603782262135" />
-    <state x="328" y="145" key="SettingsEditor" timestamp="1604140884473">
-      <screen x="0" y="23" width="1680" height="1027" />
+    <state x="693" y="343" key="FileChooserDialogImpl" timestamp="1604665045410">
+      <screen x="0" y="0" width="1824" height="1176" />
     </state>
+    <state x="693" y="343" key="FileChooserDialogImpl/0.0.1824.1176@0.0.1824.1176" timestamp="1604665045410" />
+    <state x="356" y="140" key="SettingsEditor" timestamp="1604384085524">
+      <screen x="0" y="0" width="1824" height="1176" />
+    </state>
+    <state x="356" y="140" key="SettingsEditor/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604384085524" />
     <state x="912" y="-1259" key="SettingsEditor/0.23.1680.1027/-1193.-2137.3840.2137@-1193.-2137.3840.2137" timestamp="1603499661605" />
     <state x="328" y="145" key="SettingsEditor/0.23.1680.1027@0.23.1680.1027" timestamp="1604140884473" />
     <state x="299" y="23" width="1333" height="833" key="dock-window-1" timestamp="1604040714358">
@@ -153,20 +180,28 @@
     </state>
     <state x="-212" y="-1199" width="1333" height="1008" key="dock-window-2/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1604040329055" />
     <state x="0" y="23" width="1333" height="1008" key="dock-window-2/0.23.1680.1027@0.23.1680.1027" timestamp="1604040714358" />
-    <state x="538" y="169" width="604" height="735" key="find.popup" timestamp="1603595727598">
-      <screen x="0" y="23" width="1680" height="1027" />
+    <state x="584" y="167" width="656" height="842" key="find.popup" timestamp="1604473003257">
+      <screen x="0" y="0" width="1824" height="1176" />
     </state>
+    <state x="584" y="167" width="656" height="842" key="find.popup/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604385455044" />
+    <state x="584" y="167" width="656" height="842" key="find.popup/0.0.1824.1176@0.0.1824.1176" timestamp="1604473003257" />
     <state x="538" y="169" width="604" height="735" key="find.popup/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603595727598" />
     <state x="505" y="248" key="run.anything.popup" timestamp="1603785575589">
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="505" y="248" key="run.anything.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1603785575589" />
-    <state x="956" y="334" width="670" height="716" key="search.everywhere.popup" timestamp="1603782537515">
-      <screen x="0" y="23" width="1680" height="1027" />
+    <state x="1038" y="356" width="728" height="820" key="search.everywhere.popup" timestamp="1604472616068">
+      <screen x="0" y="0" width="1824" height="1176" />
     </state>
     <state x="956" y="318" width="670" height="732" key="search.everywhere.popup/0.0.1680.1050@0.0.1680.1050" timestamp="1602993513804" />
+    <state x="1038" y="356" width="728" height="820" key="search.everywhere.popup/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604386794285" />
+    <state x="1038" y="356" width="728" height="820" key="search.everywhere.popup/0.0.1824.1176@0.0.1824.1176" timestamp="1604472616068" />
     <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603598658916" />
     <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1603782537515" />
     <state x="956" y="317" width="670" height="676" key="search.everywhere.popup/0.23.1680.970@0.23.1680.970" timestamp="1602934096279" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
   </component>
 </project>
