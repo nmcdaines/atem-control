@@ -1,6 +1,7 @@
-import {  } from "atem-lib";
-
-import {Atem} from "atem-connection";
+import { ActionSetPiP, EDirection } from './ActionSetPiP';
+import { ActionSetPreview } from './ActionSetPreview';
+import { ActionSetProgram } from './ActionSetProgram';
+import { ActionTransitionAuto } from './ActionTransitionAuto';
 
 export enum ActionType {
   SET_PROGRAM = "SET_PROGRAM",                  // me, input
@@ -9,19 +10,20 @@ export enum ActionType {
   TRANSITION_CUT = "TRANSITION_CUT",            // me, [optional] source
   SET_PIP = "SET_PIP",                          // me, enabled, left, top, height, width
 
-  RECALL_SHORTCUT = "RECALL_SHORTCUT",
+  RECALL_SHORTCUTE = "RECALL_SHORTCUT",
   RECALL_MACRO = "RECALL_MACRO",
 }
 
 export interface IAction<P> {
   type: ActionType,
   properties: P;
-  execute: (atem: Atem) => any;
+  getMessage: () => { type: ActionType, properties: P };
 }
 
-// export {
-//   ActionSetProgram,
-//   ActionSetPreview,
-//   ActionSetPiP,
-//   EDirection,
-// }
+export {
+  ActionSetProgram,
+  ActionSetPreview,
+  ActionSetPiP,
+  ActionTransitionAuto,
+  EDirection,
+}
