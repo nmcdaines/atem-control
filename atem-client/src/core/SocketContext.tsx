@@ -1,7 +1,11 @@
 import React from "react";
+import io from "socket.io-client";
+import {IAction} from "./actions";
 
 const SocketStateContext = React.createContext<any>(undefined);
 const SocketDispatchContext = React.createContext<any>(undefined);
+
+const socket = io('ws://localhost:3000', {});
 
 const initialState: any = {
   devices: [
@@ -20,6 +24,9 @@ function reducerFn(state: any, action: any) {
   return { ...initialState };
 }
 
+function executeAction(action: IAction<any>) {
+  action.getMessage();
+}
 
 function SocketProvider({ children }: any) {
   const [state, dispatch] = React.useReducer<any>(reducerFn, initialState);

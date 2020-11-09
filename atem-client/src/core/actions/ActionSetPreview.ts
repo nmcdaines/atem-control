@@ -4,7 +4,7 @@ export interface ISetPreviewProperties {
   input: string;
 }
 
-export class ActionSetProgram implements IAction<ISetPreviewProperties> {
+export class ActionSetPreview implements IAction<ISetPreviewProperties> {
   type: ActionType;
   properties: ISetPreviewProperties;
 

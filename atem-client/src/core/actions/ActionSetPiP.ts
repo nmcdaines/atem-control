@@ -1,6 +1,6 @@
 import {ActionType, IAction} from './index';
 
-export enum IDirection {
+export enum EDirection {
   ON = "ON",
   OFF = "OFF"
 }
@@ -10,7 +10,7 @@ export interface ISetPiPProperties {
   positionY: number;
   scaleX: number;
   scaleY: number;
-  direction: IDirection;
+  direction: EDirection;
 }
 
 export class ActionSetPiP implements IAction<ISetPiPProperties> {
