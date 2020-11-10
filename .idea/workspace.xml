@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="BranchesTreeState">
     <expand>
       <path>
@@ -20,54 +23,33 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="540b02d6-515e-4e92-95e6-cfc882479295" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionRecallMacro.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionRecallMacro.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionRecallShortcut.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionRecallShortcut.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionSetPiP.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionSetPiP.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionSetPreview.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionSetPreview.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionSetProgram.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionSetProgram.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionTransitionAuto.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionTransitionAuto.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionTypescriptCut.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionTypescriptCut.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/index.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/index.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/index.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/index.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionRecallMacro.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionRecallMacro.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionRecallShortcut.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionRecallShortcut.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionSetPiP.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionSetPiP.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionSetPreview.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionSetPreview.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionSetProgram.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionSetProgram.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionTransitionAuto.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionTransitionAuto.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionTypescriptCut.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionTypescriptCut.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/index.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/index.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/index.d.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/index.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/src/actions/ActionRecallMacro.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/src/actions/ActionRecallShortcut.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/src/actions/ActionSetPiP.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/src/actions/ActionSetPreview.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/src/actions/ActionSetProgram.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/src/actions/ActionTransitionAuto.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/src/actions/ActionTypescriptCut.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-lib/src/actions/index.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-client/package-lock.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionNoop.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/ActionNoop.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionNoop.d.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/ActionNoop.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-lib/src/actions/ActionNoop.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/core/actions/ActionNoop.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/core/actions/ActionRecallMacro.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/core/actions/ActionRecallShortcut.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/core/actions/ActionSetPiP.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/core/actions/ActionSetPreview.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/core/actions/ActionTransitionAuto.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/core/actions/ActionTypescriptCut.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/atem-server/core/actions/index.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/core/actions/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/core/actions/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/src/core/actions/ActionSetPiP.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/core/actions/ActionSetPiP.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-lib/build/main/actions/index.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/index.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-lib/build/main/actions/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-lib/build/module/actions/index.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/index.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-lib/build/module/actions/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/ActionSetPiP.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/src/actions/ActionSetPiP.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/src/actions/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/atem/atem.service.spec.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/atem/atem.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/core/actions/ActionSetPip.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/core/actions/ActionSetProgram.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/core/actions/index.ts" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -102,12 +84,12 @@
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="com.intellij.ide.scratch.LRUPopupBuilder$1/New Scratch File" value="TEXT" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/atem-lib/src/actions" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/atem-server/core/actions" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
     <property name="nodejs_package_manager_path" value="npm" />
-    <property name="settings.editor.selected.configurable" value="preferences.keymap" />
+    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
     <property name="ts.external.directory.path" value="C:\Users\nmcda\projects\atem-control\atem-server\node_modules\typescript\lib" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
@@ -117,11 +99,11 @@
       <recent name="$PROJECT_DIR$" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/atem-server/core/actions" />
+      <recent name="$PROJECT_DIR$/atem-client/src/core/actions" />
       <recent name="$PROJECT_DIR$/atem-lib/src/actions" />
       <recent name="C:\Users\nmcda\projects\atem-control\atem-client\src\containers\Surface" />
       <recent name="C:\Users\nmcda\projects\atem-control\atem-client\src\containers\Shortcuts" />
-      <recent name="C:\Users\nmcda\projects\atem-control\atem-client\src\containers\Settings" />
-      <recent name="$PROJECT_DIR$/atem-server" />
     </key>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
@@ -192,11 +174,11 @@
     <state x="281" y="295" key="#com.intellij.fileTypes.FileTypeChooser/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604385010307" />
     <state x="259" y="281" key="#com.intellij.fileTypes.FileTypeChooser/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603594078478" />
     <state x="394" y="364" key="#com.intellij.fileTypes.FileTypeChooser/0.23.2560.1360@0.23.2560.1360" timestamp="1602910013593" />
-    <state x="709" y="270" key="#com.intellij.ide.util.MemberChooser" timestamp="1604580406122">
-      <screen x="0" y="0" width="1824" height="1176" />
+    <state x="653" y="259" key="#com.intellij.ide.util.MemberChooser" timestamp="1605004369721">
+      <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="709" y="270" key="#com.intellij.ide.util.MemberChooser/0.0.1824.1176@0.0.1824.1176" timestamp="1604580406122" />
-    <state x="653" y="259" key="#com.intellij.ide.util.MemberChooser/0.23.1680.1027@0.23.1680.1027" timestamp="1603782262135" />
+    <state x="653" y="259" key="#com.intellij.ide.util.MemberChooser/0.23.1680.1027@0.23.1680.1027" timestamp="1605004369721" />
     <state x="578" y="290" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1604901062660">
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
@@ -205,12 +187,12 @@
       <screen x="0" y="0" width="1824" height="1176" />
     </state>
     <state x="693" y="343" key="FileChooserDialogImpl/0.0.1824.1176@0.0.1824.1176" timestamp="1604665045410" />
-    <state x="356" y="140" key="SettingsEditor" timestamp="1604384085524">
-      <screen x="0" y="0" width="1824" height="1176" />
+    <state x="328" y="145" key="SettingsEditor" timestamp="1604999260582">
+      <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="356" y="140" key="SettingsEditor/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604384085524" />
     <state x="912" y="-1259" key="SettingsEditor/0.23.1680.1027/-1193.-2137.3840.2137@-1193.-2137.3840.2137" timestamp="1603499661605" />
-    <state x="328" y="145" key="SettingsEditor/0.23.1680.1027@0.23.1680.1027" timestamp="1604140884473" />
+    <state x="328" y="145" key="SettingsEditor/0.23.1680.1027@0.23.1680.1027" timestamp="1604999260581" />
     <state x="299" y="23" width="1333" height="833" key="dock-window-1" timestamp="1604040714358">
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
@@ -232,14 +214,14 @@
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="505" y="248" key="run.anything.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1603785575589" />
-    <state x="956" y="334" width="670" height="716" key="search.everywhere.popup" timestamp="1604831809235">
+    <state x="956" y="334" width="670" height="716" key="search.everywhere.popup" timestamp="1604999409630">
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="956" y="318" width="670" height="732" key="search.everywhere.popup/0.0.1680.1050@0.0.1680.1050" timestamp="1602993513804" />
     <state x="1038" y="356" width="728" height="820" key="search.everywhere.popup/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604386794285" />
     <state x="1038" y="356" width="728" height="820" key="search.everywhere.popup/0.0.1824.1176@0.0.1824.1176" timestamp="1604472616068" />
     <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603598658916" />
-    <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1604831809235" />
+    <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1604999409630" />
     <state x="956" y="317" width="670" height="676" key="search.everywhere.popup/0.23.1680.970@0.23.1680.970" timestamp="1602934096279" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">

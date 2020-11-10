@@ -8,8 +8,8 @@ export enum EDirection {
 export interface ISetPiPProperties {
   positionX: number;
   positionY: number;
-  scaleX: number;
-  scaleY: number;
+  sizeX: number;
+  sizeY: number;
   direction: EDirection;
 }
 

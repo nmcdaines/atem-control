@@ -1,11 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IAtem } from './atem.interface';
 import { Atem, AtemState } from 'atem-connection';
+import { WebSocketServer } from '@nestjs/websockets';
+import { Socket, Server } from 'socket.io';
 
 @Injectable()
 export class AtemService {
   private readonly logger: Logger = new Logger('AtemService');
   private readonly devices: Array<IAtem> = [];
+
+  @WebSocketServer() server: Server;
 
   getDevice(ipAddress: string) {
     const device = this.devices.find((device) => device.ipAddress === ipAddress);
@@ -51,7 +55,7 @@ export class AtemService {
   }
   private onDisconnected = (ipAddress) => () => this.updateDevice(ipAddress, { status: 'disconnected' });
   private onStateChange = (ipAddress) => (state: AtemState, pathToChange) => {
-    // handle state changes here
+    this.server.emit('state:change', { ipAddress, state });
   }
 
   async setProgram(ipAddress: string, input: number, me?: number) {
@@ -68,27 +72,8 @@ export class AtemService {
     const device = this.getDevice(ipAddress);
     await device.atem.changePreviewInput(input);
     const transitionMenthod = mode === 'cut' ? 'cut' : 'autoTransition';
-    await device.atem[transitionMenthod];
+    await device.atem[transitionMenthod]();
   }
-
-  // async setPiP(ipAddress: string) {
-  //   const device = this.getDevice(ipAddress);
-  //
-  //
-  //
-  //   // device.atem.setDVETransitionSettings()
-  //   // device.atem.setSuperSourceBoxSettings()
-  //   // device.atem.setUpstreamKeyerDVESettings()
-  //   // device.atem.setStreamingService()
-  //   device.atem.setSuperSourceProperties
-  // }
-  //
-  // async setPiP(ipAddress: string) {
-  //   const device = this.getDevice(ipAddress);
-  //   await device.atem.setSuperSourceBorder({ borderEnabled: false });
-  //   // await device.atem.setSuperSourceBoxSettings({  })
-  //   // await device.atem.setSuperSourceProperties({ })
-  // }
 
   async disconnect(ipAddress) {
     const device = this.getDevice(ipAddress);

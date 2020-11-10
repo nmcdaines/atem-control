@@ -1,3 +1,6 @@
+import { IAction } from "atem-lib";
+import { Atem } from "atem-connection";
+
 import { ActionNoop } from "./ActionNoop";
 import { ActionSetPiP, EDirection } from "./ActionSetPiP";
 import { ActionSetPreview } from "./ActionSetPreview";
@@ -17,11 +20,10 @@ export enum ActionType {
   NOOP = "NOOP",
 }
 
-export interface IAction<P> {
+export interface IServerAction<P> extends IAction<P>{
   type: ActionType;
   properties: P;
-  // getMessage: () => { type: ActionType, properties: P };
-  // execute: (atem ) => undefined;
+  execute: (atem: Atem) => Promise<void | undefined>;
 }
 
 // TODO: Implement a Noop action
