@@ -45,8 +45,6 @@ export class AtemGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   async handleGetInitialState(client: Socket, payload: string) {
     this.logger.log('action:state:initial was called');
 
-    console.time("get devices state");
-
     const devices = await this.atemService.listDevices();
 
     const atemStates = devices.reduce<any>((acc, val) => {
