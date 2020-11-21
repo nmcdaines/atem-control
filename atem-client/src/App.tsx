@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import AppBar from './components/AppBar';
+import { TextField, Button, Box, Container, Paper } from "@material-ui/core";
 import io from 'socket.io-client';
 
 import {
@@ -47,50 +48,51 @@ function App() {
         </Router>
 
 
-      {/*<code style={{ paddingTop: '100px' }}>*/}
-      {/*  { JSON.stringify(atemState) }*/}
-      {/*</code>*/}
-
       <div>
-      <input
+
+
+        <Container style={{ marginTop: 20 }}>
+          <Paper>
+            <Box p={2}>
+
+      <Box>
+            <TextField
+        variant="outlined"
+        fullWidth
         value={messageType}
         onChange={(e) => setMessageType(e.target.value)}
         placeholder="Message Type"
+        label="Type"
       />
-
-      <textarea
+      </Box>
+      <Box mt={2}>
+        <TextField
+        variant="outlined"
+        fullWidth
+        multiline
         value={messageBody}
         onChange={(e) => setMessageBody(e.target.value)}
-        placeholder="Message Body"
+        placeholder="Body"
+        label="Body"
       />
-
-        <button
+      </Box>
+              <Box mt={2}>
+                <Button
+          variant="contained"
+          color="primary"
           onClick={() => {
             console.log('connect message');
             // socket.emit(messageType, JSON.parse(messageBody));
           }}
         >
             Send
-        </button>
+        </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Container>
+
       </div>
-
-
-        <button onClick={() => {
-            console.log('connect message');
-            // socket.emit('atem:connect', 'this is the args');
-        }}>
-            Connect
-        </button>
-
-          <button onClick={() => {
-              console.log('sending message');
-              // socket.emit('macro:run', 'hello world')
-          }}>
-              Send message
-          </button>
-
-
-
     </div>
   );
 }

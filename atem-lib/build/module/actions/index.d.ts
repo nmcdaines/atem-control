@@ -6,7 +6,11 @@ declare enum ActionType {
     SET_PIP = "SET_PIP",
     RECALL_SHORTCUT = "RECALL_SHORTCUT",
     RECALL_MACRO = "RECALL_MACRO",
-    NOOP = "NOOP"
+    NOOP = "NOOP",
+    SET_LIVESTREAM = "SET_LIVESTREAM",
+    LIVESTREAM_START = "LIVESTREAM_START",
+    LIVESTREAM_STOP = "LIVESTREAM_STOP",
+    SET_INPUT_NAME = "NAME"
 }
 interface IAction<P> {
     type: ActionType;
@@ -17,6 +21,11 @@ interface IClientAction<P> extends IAction<P> {
         type: ActionType;
         properties: P;
     };
+}
+interface ISetInputNameProperties {
+    input: number;
+    longName: string;
+    shortName: string;
 }
 interface ISetPiPProperties {
     positionX: number;
@@ -42,4 +51,4 @@ declare enum EDirection {
     ON = "ON",
     OFF = "OFF"
 }
-export { ActionType, IAction, IClientAction, ISetPiPProperties, ISetPreviewProperties, ISetProgramProperties, ITransitionAutoProperties, ITransitionCutProperties, EDirection, };
+export { ActionType, IAction, IClientAction, ISetPiPProperties, ISetPreviewProperties, ISetProgramProperties, ITransitionAutoProperties, ITransitionCutProperties, ISetInputNameProperties, EDirection, };

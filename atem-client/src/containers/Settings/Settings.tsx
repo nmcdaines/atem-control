@@ -5,6 +5,7 @@ import SettingsNavigation from "../../components/SettingsNavigation";
 
 import { Route, Redirect, useRouteMatch, useLocation } from "react-router-dom";
 import SettingsDevices from "./SettingsDevices";
+import Macros from './Macros';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -44,7 +45,7 @@ function Settings() {
           Livestream
         </Route>
         <Route path={`${path}/macros`}>
-          Macros
+          <Macros />
         </Route>
         <Route path={`${path}/shortcuts`}>
           Shortcuts

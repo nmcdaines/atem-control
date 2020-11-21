@@ -29,7 +29,7 @@ const useStyles = makeStyles((theme: Theme) =>
 );
 
 const links = [
-  {text: 'SURFACE', to: '/'},
+  {text: 'SURFACE', to: '/surface'},
   {text: 'SHORTCUTS', to: '/shortcuts'},
   {text: 'SETTINGS', to: '/settings'},
   {text: 'LIVESTREAM', to: '/livestream'},

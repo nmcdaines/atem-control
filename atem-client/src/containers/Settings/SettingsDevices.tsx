@@ -1,25 +1,42 @@
 import React from "react";
-import { useSocketState } from "core/SocketContext";
+import {useAtemState, useSocketState} from "core/SocketContext";
 import { Grid, List, ListSubheader, Button, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Paper } from "@material-ui/core";
 import AddIcon from '@material-ui/icons/Add';
 
 import DeviceCard from "components/DeviceCard";
 
 function SettingsDevices() {
-  const { devices, discovery }: any = useSocketState();
+  const atemState = useAtemState();
+  const devices = Object.keys(atemState);
 
-  console.log(discovery);
+
+
+  console.log(devices);
 
   return (
     <div>
       <Grid container spacing={2}>
         <Grid item md={8}>
-          { devices.map((device: any) => {
+          { devices.map((deviceId: string) => {
+            const { info, inputs, video } = atemState[deviceId] || {};
+
+            console.log(atemState[deviceId]);
 
             return (
-              <DeviceCard />
+              <div key={`device-card-${deviceId}`}>
+                 <DeviceCard
+                    productIdentifier={info.productIdentifier}
+                 />
+              </div>
             );
           })}
+
+          {/*{ devices.map((device: any) => {*/}
+
+          {/*  return (*/}
+          {/*    <DeviceCard />*/}
+          {/*  );*/}
+          {/*})}*/}
 
 
         </Grid>
@@ -33,22 +50,22 @@ function SettingsDevices() {
                 </ListSubheader>
               }
             >
-              {discovery.map((device: any) => {
+              {/*{discovery.map((device: any) => {*/}
 
-                return (
-                  <ListItem key={`discovered-item-${device.ip}`}>
-                    <ListItemText
-                      primary={device.ip}
-                      secondary="Manufacturer"
-                    />
-                    <ListItemSecondaryAction>
-                      <IconButton edge="end" aria-label="add">
-                        <AddIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                )
-              })}
+              {/*  return (*/}
+              {/*    <ListItem key={`discovered-item-${device.ip}`}>*/}
+              {/*      <ListItemText*/}
+              {/*        primary={device.ip}*/}
+              {/*        secondary="Manufacturer"*/}
+              {/*      />*/}
+              {/*      <ListItemSecondaryAction>*/}
+              {/*        <IconButton edge="end" aria-label="add">*/}
+              {/*          <AddIcon />*/}
+              {/*        </IconButton>*/}
+              {/*      </ListItemSecondaryAction>*/}
+              {/*    </ListItem>*/}
+              {/*  )*/}
+              {/*})}*/}
             </List>
           </Paper>
         </Grid>

@@ -7,11 +7,7 @@ import { red } from '@material-ui/core/colors';
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
-      maxWidth: 345,
-    },
-    media: {
-      height: 0,
-      paddingTop: '56.25%', // 16:9
+      maxWidth: '100%',
     },
     expand: {
       transform: 'rotate(0deg)',
@@ -29,34 +25,24 @@ const useStyles = makeStyles((theme: Theme) =>
   }),
 );
 
-function DeviceCard() {
+function DeviceCard({ productIdentifier }: any) {
   const classes = useStyles();
 
 return (
     <Card className={classes.root}>
       <CardHeader
-        avatar={
-          <Avatar aria-label="recipe" className={classes.avatar}>
-            R
-          </Avatar>
-        }
         action={
           <IconButton aria-label="settings">
             <MoreVertIcon />
           </IconButton>
         }
-        title="Shrimp and Chorizo Paella"
-        subheader="September 14, 2016"
-      />
-      <CardMedia
-        className={classes.media}
-        image="/static/images/cards/paella.jpg"
-        title="Paella dish"
+        title="ATEM Mini Pro ISO"
+        subheader="192.168.0.218"
       />
       <CardContent>
         <Typography variant="body2" color="textSecondary" component="p">
-          This impressive paella is a perfect party dish and a fun meal to cook together with your
-          guests. Add 1 cup of frozen peas along with the mussels, if you like.
+          { productIdentifier }
+
         </Typography>
       </CardContent>
     </Card>

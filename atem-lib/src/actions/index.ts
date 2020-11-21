@@ -13,6 +13,8 @@ enum ActionType {
   SET_LIVESTREAM = "SET_LIVESTREAM",
   LIVESTREAM_START = "LIVESTREAM_START",
   LIVESTREAM_STOP = "LIVESTREAM_STOP",
+
+  SET_INPUT_NAME = "NAME",
 }
 
 interface IAction<P> {
@@ -22,6 +24,12 @@ interface IAction<P> {
 
 interface IClientAction<P> extends IAction<P> {
   getMessage: () => { type: ActionType, properties: P };
+}
+
+interface ISetInputNameProperties {
+  input: number;
+  longName: string;
+  shortName: string;
 }
 
 interface ISetPiPProperties {
@@ -63,5 +71,6 @@ export {
   ISetProgramProperties,
   ITransitionAutoProperties,
   ITransitionCutProperties,
+  ISetInputNameProperties,
   EDirection,
 }

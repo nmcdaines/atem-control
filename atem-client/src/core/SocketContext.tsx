@@ -43,23 +43,6 @@ function SocketProvider({ children }: any) {
 
       // SOCKET INITIALISED
       socket.emit('action:state:initial');
-
-      socket.emit(
-        'action:execute',
-        {
-          id: '88ccfdaa-ffa0-492c-a659-9fe716260f52',
-          type: 'SET_PROGRAM',
-          properties: { input: 1 }
-        })
-
-      socket.emit(
-        'action:execute',
-        {
-          id: '88ccfdaa-ffa0-492c-a659-9fe716260f52',
-          type: 'SET_PREVIEW',
-          properties: { input: 4 }
-        })
-
     });
 
     socket.on('state:initial', (payload: any) => {

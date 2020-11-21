@@ -6,6 +6,7 @@ import { ActionSetPiP, EDirection } from "./ActionSetPiP";
 import { ActionSetPreview } from "./ActionSetPreview";
 import { ActionSetProgram } from "./ActionSetProgram";
 import { ActionTransitionAuto } from "./ActionTransitionAuto";
+import { ActionSetInputName } from './ActionSetInputName';
 
 // export enum ActionType {
   // SET_PROGRAM = "SET_PROGRAM",                  // me, input
@@ -39,6 +40,8 @@ export function objectToAction(type: string, properties: any): IServerAction<any
 
     [ActionType.RECALL_SHORTCUT]: ActionNoop,
     [ActionType.RECALL_MACRO]: ActionNoop,
+
+    [ActionType.SET_INPUT_NAME]: ActionSetInputName,
   }[type];
 
   return FoundAction

@@ -9,6 +9,12 @@ export class Macro {
     @Column()
     name: string;
 
+    @Column()
+    description: string;
+
     @Column('jsonb')
     steps: IStep[];
+
+    @Column()
+    device: string;
 }
