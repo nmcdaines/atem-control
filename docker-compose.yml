@@ -1,12 +1,69 @@
 version: '2.1'
 services:
+  postgres:
+    container_name: postgres
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/data/postgres
+    env_file:
+      - docker.env
+    networks:
+      - postgres
+
+  pgadmin:
+    links:
+      - postgres:postgres
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    ports:
+      - "8081:80"
+    volumes:
+      - ./data/pgadmin:/root/.pgadmin
+    env_file:
+      - docker.env
+    networks:
+      - postgres
+
   backend:
     build: ./atem-server
     expose:
       - "3000"
     ports:
       - "3000:3000"
+      - 1935:1935
     network_mode: bridge
+
+  restreamer:
+    image: datarhei/restreamer:latest
+    container_name: restreamer
+    expose:
+      - "8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      - "~/db:/restreamer/db"
+    environment:
+      - RS_USERNAME=admin
+      - RS_PASSWORD=admin
+      - RS_TIMEZONE=Australia/Sydney
+      - RS_TOKEN=wPtYpe2di
+
+#fblive:
+#    image: dweomer/stunnel
+#    container_name: fblive
+#    expose:
+#      - 1935
+#    networks:
+#      - frontend
+#    restart: always
+#    environment:
+#      - STUNNEL_SERVICE=fb-live
+#      - STUNNEL_CLIENT=yes
+#      - STUNNEL_ACCEPT=1935
+#      - STUNNEL_CONNECT=live-api-s.facebook.com:443
+#      - STUNNEL_VERIFY_CHAIN=NO
 
 #  frontend:
 #    build: ./frontend

@@ -33,7 +33,7 @@ const defaultTextFieldProps: any = {
 }
 
 interface IMacroFormProps {
-  // isOpen: boolean,
+  isOpen: boolean,
 
   initialValues: any,
   onSubmit: any;
@@ -48,7 +48,7 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
 
   return (
     <Dialog
-        open={true}
+        open={props.isOpen}
         fullWidth
         maxWidth="sm"
       >
@@ -125,8 +125,6 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                       name="steps"
                       render={arrayHelpers => (
                         <>
-                          { JSON.stringify(steps) }
-
                           { steps.map((step: any, index: number) => (
                             <Box
                               key={`step-${index}`}
@@ -148,20 +146,141 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                       required
                                     />
                                   </Box>
+
+
+
                                   <Box mt={1}>
-                                    <TextField
-                                      fullWidth
-                                      variant="outlined"
-                                      label="Command"
-                                      margin="dense"
-                                      name={`step.${index}.command`}
-                                      onBlur={handleBlur}
-                                      onChange={handleChange}
-                                      value={step.command || ''}
-                                      required
-                                    />
+                                    <FormControl {...defaultTextFieldProps}>
+                                      <InputLabel required>
+                                        Command
+                                      </InputLabel>
+                                      <Select
+                                        label="Command"
+                                        name={`steps.${index}.command`}
+                                        onBlur={handleBlur}
+                                        onChange={handleChange}
+                                        value={step.command || ''}
+                                        required
+                                      >
+                                        <MenuItem value="SET_PROGRAM">Set Program Input</MenuItem>
+                                        <MenuItem value="SET_PREVIEW">Set Preview Input</MenuItem>
+                                        <MenuItem value="SET_PIP">Set Picture In Picture</MenuItem>
+                                        <MenuItem value="TRANSITION_AUTO">Transition AUTO</MenuItem>
+                                        <MenuItem value="TRANSITION_CUT">Transition CUT</MenuItem>
+                                      </Select>
+                                    </FormControl>
                                   </Box>
                                   Properties
+
+                                  {step.command != 'SET_PIP' &&
+                                    <Box mt={1}>
+                                        <TextField
+                                            fullWidth
+                                            variant="outlined"
+                                            label="Input"
+                                            margin="dense"
+                                            name={`steps.${index}.input`}
+                                            onBlur={handleBlur}
+                                            onChange={handleChange}
+                                            value={step.input || ''}
+                                            required={(
+                                              step.command === 'SET_PROGRAM' ||
+                                              step.command === 'SET_PREVIEW'
+                                            )}
+                                        />
+                                    </Box>
+                                  }
+
+                                  { step.command === 'SET_PIP' &&
+                                    <>
+                                      <Box mt={1}>
+                                        <FormControl {...defaultTextFieldProps}>
+                                          <InputLabel required>
+                                            Command
+                                          </InputLabel>
+                                          <Select
+                                            label="Command"
+                                            name={`steps.${index}.direction`}
+                                            onBlur={handleBlur}
+                                            onChange={handleChange}
+                                            value={step.direction || ''}
+                                            required
+                                          >
+                                            <MenuItem value="ON">On</MenuItem>
+                                            <MenuItem value="OFF">Off</MenuItem>
+                                          </Select>
+                                        </FormControl>
+                                      </Box>
+
+                                      <Box mt={1}>
+                                        <TextField
+                                          fullWidth
+                                          variant="outlined"
+                                          label="Position X"
+                                          margin="dense"
+                                          name={`steps.${index}.positionX`}
+                                          onBlur={handleBlur}
+                                          onChange={handleChange}
+                                          value={step.positionX || ''}
+                                          required
+                                        />
+                                      </Box>
+                                      <Box mt={1}>
+                                        <TextField
+                                          fullWidth
+                                          variant="outlined"
+                                          label="Position Y"
+                                          margin="dense"
+                                          name={`steps.${index}.positionY`}
+                                          onBlur={handleBlur}
+                                          onChange={handleChange}
+                                          value={step.positionY || ''}
+                                          required
+                                        />
+                                      </Box>
+                                      <Box mt={1}>
+                                        <TextField
+                                          fullWidth
+                                          variant="outlined"
+                                          label="Size X"
+                                          margin="dense"
+                                          name={`steps.${index}.sizeX`}
+                                          onBlur={handleBlur}
+                                          onChange={handleChange}
+                                          value={step.sizeX || ''}
+                                          required
+                                        />
+                                      </Box>
+                                      <Box mt={1}>
+                                        <TextField
+                                          fullWidth
+                                          variant="outlined"
+                                          label="Size Y"
+                                          margin="dense"
+                                          name={`steps.${index}.sizeY`}
+                                          onBlur={handleBlur}
+                                          onChange={handleChange}
+                                          value={step.sizeY || ''}
+                                          required
+                                        />
+                                      </Box>
+                                      <Box mt={1}>
+                                        <TextField
+                                          fullWidth
+                                          variant="outlined"
+                                          label="Source"
+                                          margin="dense"
+                                          name={`steps.${index}.source`}
+                                          onBlur={handleBlur}
+                                          onChange={handleChange}
+                                          value={step.source || ''}
+                                          required={(
+                                            step.command === 'SET_PIP'
+                                          )}
+                                        />
+                                      </Box>
+                                    </>
+                                  }
                                 </Box>
                               </Paper>
                             </Box>

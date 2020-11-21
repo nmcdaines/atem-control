@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardHeader,
@@ -6,14 +6,6 @@ import {
   Typography,
   IconButton,
   Fab,
-  Dialog,
-  DialogTitle,
-  DialogContent, DialogContentText,
-  TextField,
-  Button,
-  DialogActions,
-  Box,
-  Paper,
 } from "@material-ui/core";
 import EditIcon from "@material-ui/icons/Edit";
 import AddIcon from "@material-ui/icons/Add";
@@ -54,7 +46,8 @@ function MacroViewItem() {
 }
 
 export default function Macros() {
-
+  const [isOpen, setIsOpen] = useState(false);
+  const [initialState, setInitialState] = useState({});
 
   return (
     <div>
@@ -64,12 +57,24 @@ export default function Macros() {
       <MacroViewItem />
       <MacroViewItem />
 
-      <Fab color="primary" style={{ position: 'fixed', right: 16, bottom: 16 }}>
+      <Fab
+        color="primary"
+        style={{ position: 'fixed', right: 16, bottom: 16 }}
+        onClick={() => {
+          setInitialState({
+            name: '',
+            description: '',
+            steps: [{ delay: 0, command: 'SET_PREVIEW' }],
+          })
+          setIsOpen(true);
+        }}
+      >
         <AddIcon />
       </Fab>
 
       <MacroForm
-        initialValues={{ hello: 'world', steps: [] }}
+        isOpen={isOpen}
+        initialValues={initialState}
         onSubmit={() => {}}
       />
     </div>

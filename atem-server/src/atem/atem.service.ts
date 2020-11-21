@@ -45,7 +45,7 @@ export class AtemService {
       return connection;
     }
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_30_SECONDS)
   async handleTryConnect() {
     this.logger.debug('Method: Try Connect called');
 
