@@ -1,12 +1,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
+import { SocketProvider } from 'core/SocketContext';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
 
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <SocketProvider>
+      <App />
+    </SocketProvider>
   </React.StrictMode>,
   document.getElementById('root')
 );

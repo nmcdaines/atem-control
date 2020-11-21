@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import AppBar from './components/AppBar';
 import io from 'socket.io-client';
 
@@ -16,12 +16,25 @@ import LivestreamContainer from "./containers/Livestream";
 
 import { SocketProvider } from "./core/SocketContext"
 
-const socket = io('ws://localhost:3000', { });
+// const socket = io('ws://localhost:3000', { });
+
+
 
 function App() {
+  const [atemState, setAtemState] = useState<any>();
+  const [messageType, setMessageType] = useState('');
+  const [messageBody, setMessageBody] = useState('{}');
+
+  // useEffect(() => {
+  //   socket.on('state:change', (val: any) => {
+  //     console.log(val);
+  //     setAtemState(val);
+  //   });
+  // });
+
   return (
     <div className="App">
-      <SocketProvider>
+
         <Router>
           <AppBar />
 
@@ -32,21 +45,46 @@ function App() {
             <Route path="/livestream" component={LivestreamContainer} />
           </Switch>
         </Router>
-      </SocketProvider>
 
 
+      {/*<code style={{ paddingTop: '100px' }}>*/}
+      {/*  { JSON.stringify(atemState) }*/}
+      {/*</code>*/}
+
+      <div>
+      <input
+        value={messageType}
+        onChange={(e) => setMessageType(e.target.value)}
+        placeholder="Message Type"
+      />
+
+      <textarea
+        value={messageBody}
+        onChange={(e) => setMessageBody(e.target.value)}
+        placeholder="Message Body"
+      />
+
+        <button
+          onClick={() => {
+            console.log('connect message');
+            // socket.emit(messageType, JSON.parse(messageBody));
+          }}
+        >
+            Send
+        </button>
+      </div>
 
 
         <button onClick={() => {
             console.log('connect message');
-            socket.emit('atem:connect', 'this is the args');
+            // socket.emit('atem:connect', 'this is the args');
         }}>
             Connect
         </button>
 
           <button onClick={() => {
               console.log('sending message');
-              socket.emit('macro:run', 'hello world')
+              // socket.emit('macro:run', 'hello world')
           }}>
               Send message
           </button>

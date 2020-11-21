@@ -10,7 +10,7 @@ export enum ActionType {
   TRANSITION_CUT = "TRANSITION_CUT",            // me, [optional] source
   SET_PIP = "SET_PIP",                          // me, enabled, left, top, height, width
 
-  RECALL_SHORTCUTE = "RECALL_SHORTCUT",
+  RECALL_SHORTCUT = "RECALL_SHORTCUT",
   RECALL_MACRO = "RECALL_MACRO",
 }
 

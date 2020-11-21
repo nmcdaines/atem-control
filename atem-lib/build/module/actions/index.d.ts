@@ -1,21 +1,45 @@
-import { ActionNoop } from "./ActionNoop";
-import { ActionSetPiP, EDirection } from "./ActionSetPiP";
-import { ActionSetPreview } from "./ActionSetPreview";
-import { ActionSetProgram } from "./ActionSetProgram";
-import { ActionTransitionAuto } from "./ActionTransitionAuto";
-export declare enum ActionType {
+declare enum ActionType {
     SET_PROGRAM = "SET_PROGRAM",
     SET_PREVIEW = "SET_PREVIEW",
     TRANSITION_AUTO = "TRANSITION_AUTO",
     TRANSITION_CUT = "TRANSITION_CUT",
     SET_PIP = "SET_PIP",
-    RECALL_SHORTCUTE = "RECALL_SHORTCUT",
+    RECALL_SHORTCUT = "RECALL_SHORTCUT",
     RECALL_MACRO = "RECALL_MACRO",
     NOOP = "NOOP"
 }
-export interface IAction<P> {
+interface IAction<P> {
     type: ActionType;
     properties: P;
 }
-export declare function objectToAction(type: string, properties: any): IAction<any>;
-export { ActionNoop, ActionSetProgram, ActionSetPreview, ActionSetPiP, ActionTransitionAuto, EDirection, };
+interface IClientAction<P> extends IAction<P> {
+    getMessage: () => {
+        type: ActionType;
+        properties: P;
+    };
+}
+interface ISetPiPProperties {
+    positionX: number;
+    positionY: number;
+    sizeX: number;
+    sizeY: number;
+    direction: EDirection;
+    source: number;
+}
+interface ISetPreviewProperties {
+    input: number;
+}
+interface ISetProgramProperties {
+    input: number;
+}
+interface ITransitionAutoProperties {
+    input?: number;
+}
+interface ITransitionCutProperties {
+    input?: number;
+}
+declare enum EDirection {
+    ON = "ON",
+    OFF = "OFF"
+}
+export { ActionType, IAction, IClientAction, ISetPiPProperties, ISetPreviewProperties, ISetProgramProperties, ITransitionAutoProperties, ITransitionCutProperties, EDirection, };

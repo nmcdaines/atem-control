@@ -3,86 +3,128 @@ import { IAtem } from './atem.interface';
 import { Atem, AtemState } from 'atem-connection';
 import { WebSocketServer } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { Device } from './device.entity';
+import {InjectRepository} from "@nestjs/typeorm";
+import {Repository} from "typeorm";
+
 
 @Injectable()
 export class AtemService {
   private readonly logger: Logger = new Logger('AtemService');
-  private readonly devices: Array<IAtem> = [];
+  private atemConnections: Map<string, IAtem> = new Map();
+
+  constructor(
+    @InjectRepository(Device)
+    private deviceRepository: Repository<Device>,
+  ) {}
 
   @WebSocketServer() server: Server;
 
-  getDevice(ipAddress: string) {
-    const device = this.devices.find((device) => device.ipAddress === ipAddress);
-    return device;
+
+  private destroyAtemConnection(atemId: string) {
+    this.atemConnections.get(atemId)?.atem?.destroy();
+    return this.atemConnections.delete(atemId);
   }
 
-  setDevice(ipAddress: string, device: IAtem) {
-    const deviceIndex = this.devices.findIndex((device) => device.ipAddress === ipAddress);
-    if (deviceIndex < 0) { return; }
-    this.devices[deviceIndex] = { ...device };
-  }
+  private async createAtem(device: Device) {
+      const {id, ipAddress} = device;
+      const connection: IAtem = {
+        ipAddress: device.ipAddress,
+        status: 'unknown',
+        reconnect: true,
+        atem: new Atem(),
+      }
 
-  updateDevice(ipAddress: string, changes: Partial<IAtem>) {
-    const device = this.devices.find((device) => device.ipAddress === ipAddress);
-    return this.setDevice(ipAddress, { ...device, ...changes });
-  }
+      connection.atem.on('connected', this.onConnected(id));
+      connection.atem.on('disconnected', this.onDisconnected(id));
+      connection.atem.on('stateChanged', this.onStateChange(id));
 
-  async connect(ipAddress: string) {
-    console.log('request connect', ipAddress);
-    if (this.getDevice(ipAddress)) {
-      return { error: 'Device already exists' }
+      await connection.atem.connect(ipAddress);
+
+      return connection;
     }
 
-    const device: IAtem = {
-      ipAddress,
-      atem: new Atem(),
-      status: 'connecting',
-    };
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async handleTryConnect() {
+    this.logger.debug('Method: Try Connect called');
 
-    this.devices.push(device);
-    
-    device.atem.on('connected', this.onConnected(ipAddress));
-    device.atem.on('disconnected', this.onDisconnected(ipAddress));
-    device.atem.on('stateChanged', this.onStateChange(ipAddress));
-    
-    await device.atem.connect(ipAddress);
+    const atemIds = Object.keys(this.atemConnections);
+    this.logger.debug('Existing atem ids', JSON.stringify(atemIds));
+
+    const devices = await this.deviceRepository.find();
+    const deviceIds = new Set(devices.map((device) => device.id));
+
+
+
+    // Remove any atems that are stale
+    await Promise.all(
+      atemIds.map((atemId) => {
+        if (deviceIds.has(atemId)) { return; }
+        return this.destroyAtemConnection(atemId);
+      })
+    );
+
+    this.logger.debug("devices", JSON.stringify(devices));
+
+    await Promise.all(
+      devices.map(async (device) => {
+        const existingConnection = this.atemConnections.get(device.id);
+        const ipChanged = device.ipAddress != existingConnection?.ipAddress;
+        // TODO: Reconnect if disconnected
+
+        this.logger.log(`${device.id}, ${!!existingConnection}, ${ipChanged}`);
+        if (existingConnection && !ipChanged) { return; }
+        this.destroyAtemConnection(device.id);
+
+        const connection = await this.createAtem(device);
+        this.atemConnections.set(device.id, connection);
+      })
+    );
   }
 
-  // TODO: emit event for [on] connect/disconnect
-  private onConnected = (ipAddress) => () => {
-    console.log('connected to ' + ipAddress + 'successful');
-    this.updateDevice(ipAddress, { status: 'connected' });
-  }
-  private onDisconnected = (ipAddress) => () => this.updateDevice(ipAddress, { status: 'disconnected' });
-  private onStateChange = (ipAddress) => (state: AtemState, pathToChange) => {
-    this.server.emit('state:change', { ipAddress, state });
+  private updateConnection = (id: string, change: Partial<IAtem>) => {
+    const connection = this.atemConnections.get(id);
+    this.atemConnections.set(id, {
+      ...connection,
+      ...change,
+    });
   }
 
-  async setProgram(ipAddress: string, input: number, me?: number) {
-    const device = this.getDevice(ipAddress);
-    await device.atem.changeProgramInput(input, me);
+  private onConnected = (id) => () => {
+    console.log('connected to ' + id + 'successful');
+    this.updateConnection(id, { status: 'connected' });
+  }
+  private onDisconnected = (id) => () => {
+    this.updateConnection(id, { status: 'disconnected' });
+  }
+  private onStateChange = (id) => (state: AtemState, pathToChange) => {
+    // console.log(this.server)
+    this.logger.log("state changed", pathToChange);
+    this.server.emit('state:change', { id, state, pathToChange });
   }
 
-  async setPreview(ipAddress: string, input: number, me?: number) {
-    const device = this.getDevice(ipAddress);
-    await device.atem.changePreviewInput(input, me);
+  public listDevices(): Promise<Device[]> {
+    return this.deviceRepository.find();
   }
 
-  async transition(ipAddress: string, input: number, mode?: 'auto' | 'cut') {
-    const device = this.getDevice(ipAddress);
-    await device.atem.changePreviewInput(input);
-    const transitionMenthod = mode === 'cut' ? 'cut' : 'autoTransition';
-    await device.atem[transitionMenthod]();
+  public getDevice(id: string): Promise<Device> {
+    return this.deviceRepository.findOne({ id });
   }
 
-  async disconnect(ipAddress) {
-    const device = this.getDevice(ipAddress);
-
-    if (!device) {
-      return { error: 'device not connected' };
-    }
-
-    await device.atem.disconnect();
+  public createDevice(device: Device) {
+    return this.deviceRepository.insert(device);
   }
 
+  public updateDevice(id: string, changes: Partial<Device>) {
+    return this.deviceRepository.update(id, changes);
+  }
+
+  public deleteDevice(id: string) {
+    return this.deviceRepository.delete(id);
+  }
+
+  public getAtem(deviceId: string) {
+    return this.atemConnections.get(deviceId);
+  }
 }

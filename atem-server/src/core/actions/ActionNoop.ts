@@ -1,4 +1,4 @@
-import { ActionType, IAction } from 'atem-lib';
+import { ActionType } from 'atem-lib';
 import { IServerAction } from "./index";
 import { Atem } from "atem-connection";
 

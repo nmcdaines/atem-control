@@ -1,48 +1,67 @@
-import { ActionNoop } from "./ActionNoop";
-import { ActionSetPiP, EDirection } from "./ActionSetPiP";
-import { ActionSetPreview } from "./ActionSetPreview";
-import { ActionSetProgram } from "./ActionSetProgram";
-import { ActionTransitionAuto } from "./ActionTransitionAuto";
-
-export enum ActionType {
+enum ActionType {
   SET_PROGRAM = "SET_PROGRAM",                  // me, input
   SET_PREVIEW = "SET_PREVIEW",                  // me, input
   TRANSITION_AUTO = "TRANSITION_AUTO",          // me, [optional] source
   TRANSITION_CUT = "TRANSITION_CUT",            // me, [optional] source
   SET_PIP = "SET_PIP",                          // me, enabled, left, top, height, width
 
-  RECALL_SHORTCUTE = "RECALL_SHORTCUT",
+  RECALL_SHORTCUT = "RECALL_SHORTCUT",
   RECALL_MACRO = "RECALL_MACRO",
 
   NOOP = "NOOP",
+
+  SET_LIVESTREAM = "SET_LIVESTREAM",
+  LIVESTREAM_START = "LIVESTREAM_START",
+  LIVESTREAM_STOP = "LIVESTREAM_STOP",
 }
 
-export interface IAction<P> {
+interface IAction<P> {
   type: ActionType;
   properties: P;
-  // getMessage: () => { type: ActionType, properties: P };
-  // execute: (atem ) => undefined;
 }
 
-// TODO: Implement a Noop action
-export function objectToAction(type: string, properties: any): IAction<any> {
-  // FoundAction is either an IAction or empty
-  const FoundAction = {
-    [ActionType.SET_PROGRAM]: ActionSetProgram,
-    [ActionType.SET_PREVIEW]: ActionSetProgram,
-  }[type];
-
-  return FoundAction
-    ? new FoundAction(properties)
-    : new ActionNoop();
+interface IClientAction<P> extends IAction<P> {
+  getMessage: () => { type: ActionType, properties: P };
 }
 
+interface ISetPiPProperties {
+  positionX: number;
+  positionY: number;
+  sizeX: number;
+  sizeY: number;
+  direction: EDirection;
+  source: number;
+}
+
+interface ISetPreviewProperties {
+  input: number;
+}
+
+interface ISetProgramProperties {
+  input: number;
+}
+
+interface ITransitionAutoProperties {
+  input?: number;
+}
+
+interface ITransitionCutProperties {
+  input?: number;
+}
+
+enum EDirection {
+  ON = "ON",
+  OFF = "OFF"
+}
 
 export {
-  ActionNoop,
-  ActionSetProgram,
-  ActionSetPreview,
-  ActionSetPiP,
-  ActionTransitionAuto,
+  ActionType,
+  IAction,
+  IClientAction,
+  ISetPiPProperties,
+  ISetPreviewProperties,
+  ISetProgramProperties,
+  ITransitionAutoProperties,
+  ITransitionCutProperties,
   EDirection,
 }

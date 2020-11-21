@@ -11,18 +11,22 @@ import { MacrosModule } from './macros/macros.module';
 import { ShortcutsModule } from './shortcuts/shortcuts.module';
 import { LivestreamModule } from './livestream/livestream.module';
 import { DatabaseModule } from './database/database.module';
+import { ActionsModule } from './actions/actions.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
       ConfigModule.forRoot(),
+      ScheduleModule.forRoot(),
 
+      DatabaseModule,
       AtemModule,
-      SettingsModule,
+      // SettingsModule,
       NetworkModule,
-      MacrosModule,
-      ShortcutsModule,
-      LivestreamModule,
-      DatabaseModule
+      // MacrosModule,
+      // ShortcutsModule,
+      // LivestreamModule,
+      // ActionsModule
   ],
   controllers: [AppController],
   providers: [AppService, AppGateway],

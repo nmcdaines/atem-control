@@ -6,11 +6,12 @@ export enum EDirection {
 }
 
 export interface ISetPiPProperties {
-  positionX: number;
-  positionY: number;
-  sizeX: number;
-  sizeY: number;
-  direction: EDirection;
+  positionX?: number;
+  positionY?: number;
+  sizeX?: number;
+  sizeY?: number;
+  direction?: EDirection;
+  source?: number;
 }
 
 export class ActionSetPiP implements IAction<ISetPiPProperties> {

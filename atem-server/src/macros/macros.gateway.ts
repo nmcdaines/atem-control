@@ -39,7 +39,7 @@ export class MacrosGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     @SubscribeMessage('atem:connect')
     async handleConnectMessage(client: Socket, payload: string) {
         this.logger.log('connect was called');
-        const res = await this.atemService.connect('192.168.0.218');
+        // const res = await this.atemService.connect('192.168.0.218');
         // console.log(res);
     }
 
@@ -51,7 +51,7 @@ export class MacrosGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
         // await this.atemService.connect('192.168.0.218');
 
-        const device = this.atemService.getDevice('192.168.0.218').atem;
+        // const device = this.atemService.getDevice('192.168.0.218').atem;
 
         // await device.setUpstreamKeyerType({ flyEnabled: true, mixEffectKeyType: MixEffectKeyType.DVE }, 0, 0);
 
