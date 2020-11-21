@@ -32,7 +32,7 @@ export function objectToAction(type: string, properties: any): IServerAction<any
   const FoundAction = {
     [ActionType.SET_PROGRAM]: ActionSetProgram,
     [ActionType.SET_PREVIEW]: ActionSetPreview,
-    [ActionType.SET_PREVIEW]: ActionSetPiP,
+    [ActionType.SET_PIP]: ActionSetPiP,
 
     [ActionType.TRANSITION_AUTO]: ActionNoop,
     [ActionType.TRANSITION_CUT]: ActionNoop,

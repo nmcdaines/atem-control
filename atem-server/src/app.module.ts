@@ -26,7 +26,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       // MacrosModule,
       // ShortcutsModule,
       // LivestreamModule,
-      // ActionsModule
+      ActionsModule
   ],
   controllers: [AppController],
   providers: [AppService, AppGateway],

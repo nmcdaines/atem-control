@@ -41,6 +41,24 @@ export class AtemGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     // this.atemService.deleteDevice(payload: id);
   }
 
+  @SubscribeMessage('action:state:initial')
+  async handleGetInitialState(client: Socket, payload: string) {
+    this.logger.log('action:state:initial was called');
+
+    console.time("get devices state");
+
+    const devices = await this.atemService.listDevices();
+
+    const atemStates = devices.reduce<any>((acc, val) => {
+        return {
+          ...acc,
+          [val.id]: this.atemService.getAtem(val.id).atem?.state,
+        }
+    }, {});
+
+    client.emit('state:initial', atemStates);
+  }
+
   afterInit(server: Server) {
     this.atemService.server = this.server;
     this.atemService.handleTryConnect();

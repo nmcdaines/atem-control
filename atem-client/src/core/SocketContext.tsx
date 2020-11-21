@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
-import io from "socket.io-client";
+import io  from "socket.io-client";
 import {IAction} from "./actions";
 
 const SocketStateContext = React.createContext<any>(undefined);
 const SocketDispatchContext = React.createContext<any>(undefined);
 const AtemStateContext = React.createContext<any>({});
+const SocketContext = React.createContext<SocketIOClient.Socket | undefined>(undefined);
 
-const socket = io('ws://localhost:3000', {});
+const ENDPOINT = `ws://${window.location.hostname}:3000`;
+
+let socket: SocketIOClient.Socket;
 
 const initialState: any = {
   devices: [
@@ -30,12 +33,42 @@ function executeAction(action: IAction<any>) {
 
 function SocketProvider({ children }: any) {
   const [devices, setDevices] = useState<Record<string, any>>({});
-
   const [state, dispatch] = React.useReducer<any>(reducerFn, initialState);
 
   useEffect(() => {
+    socket = io(ENDPOINT);
+
+    socket.on('connect', () => {
+      console.log('socket -> connected');
+
+      // SOCKET INITIALISED
+      socket.emit('action:state:initial');
+
+      socket.emit(
+        'action:execute',
+        {
+          id: '88ccfdaa-ffa0-492c-a659-9fe716260f52',
+          type: 'SET_PROGRAM',
+          properties: { input: 1 }
+        })
+
+      socket.emit(
+        'action:execute',
+        {
+          id: '88ccfdaa-ffa0-492c-a659-9fe716260f52',
+          type: 'SET_PREVIEW',
+          properties: { input: 4 }
+        })
+
+    });
+
+    socket.on('state:initial', (payload: any) => {
+      console.log('socket -> state:initial', payload)
+      setDevices(payload);
+    });
+
     socket.on('state:change', (payload: any) => {
-      console.log('change', payload);
+      console.log('socket -> state:change', payload);
 
       setDevices({
         ...devices,
@@ -43,19 +76,21 @@ function SocketProvider({ children }: any) {
       })
     });
 
-    // return () => {
-    //   socket.close();
-    // }
-  });
+    return () => {
+      socket.close();
+    }
+  }, []);
 
   return (
-    <SocketStateContext.Provider value={state}>
-      <SocketDispatchContext.Provider value={dispatch}>
-        <AtemStateContext.Provider value={devices}>
-          { children }
-        </AtemStateContext.Provider>
-      </SocketDispatchContext.Provider>
-    </SocketStateContext.Provider>
+    <SocketContext.Provider value={socket}>
+      <SocketStateContext.Provider value={state}>
+        <SocketDispatchContext.Provider value={dispatch}>
+          <AtemStateContext.Provider value={devices}>
+            { children }
+          </AtemStateContext.Provider>
+        </SocketDispatchContext.Provider>
+      </SocketStateContext.Provider>
+    </SocketContext.Provider>
   );
 }
 
@@ -67,6 +102,11 @@ function useSocketState() {
   return context;
 }
 
+function useSocket() {
+  const context = React.useContext(SocketContext);
+  return context;
+}
+
 function useAtemState() {
   const context = React.useContext(AtemStateContext);
   if (context === undefined) {
@@ -75,4 +115,4 @@ function useAtemState() {
   return context;
 }
 
-export { SocketProvider, useSocketState, useAtemState }
+export { SocketProvider, useSocket, useSocketState, useAtemState }

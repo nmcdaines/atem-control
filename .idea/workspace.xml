@@ -23,54 +23,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="540b02d6-515e-4e92-95e6-cfc882479295" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/atem-server/src/actions/actions.gateway.spec.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/actions/actions.gateway.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/actions/actions.module.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/actions/actions.service.spec.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/actions/actions.service.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.gateway.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/atem-server/src/core/actions/ActionSetPiP.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/atem-control.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/atem-control.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atem-client/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-client/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atem-client/src/containers/Surface/Surface.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/containers/Surface/Surface.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atem-client/src/core/SocketContext.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/core/SocketContext.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/core/actions/ActionRecallMacro.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/atem/device.entity.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/core/actions/ActionRecallShortcut.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/core/actions/ActionSetPiP.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/core/actions/ActionSetPiP.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-client/src/core/actions/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/core/actions/index.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atem-client/src/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/atem-client/src/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/build/main/actions/index.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/index.d.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/build/main/actions/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/build/main/actions/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/build/module/actions/index.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/index.d.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/build/module/actions/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/build/module/actions/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/ActionNoop.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/ActionRecallMacro.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/ActionRecallShortcut.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/ActionSetPiP.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/ActionSetPreview.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/ActionSetProgram.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/ActionTransitionAuto.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/ActionTypescriptCut.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-lib/src/actions/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-lib/src/actions/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/core/actions/ActionNoop.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/core/actions/ActionNoop.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/core/actions/ActionRecallMacro.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/core/actions/ActionRecallShortcut.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/core/actions/ActionSetPiP.ts" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/core/actions/ActionSetPreview.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/core/actions/ActionSetPreview.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/core/actions/ActionSetProgram.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/core/actions/ActionSetProgram.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/core/actions/ActionTransitionAuto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/core/actions/ActionTransitionAuto.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/core/actions/ActionTypescriptCut.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/core/actions/ActionTypescriptCut.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/core/actions/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/core/actions/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/actions/actions.gateway.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/actions/actions.gateway.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/actions/actions.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/actions/actions.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/actions/actions.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/actions/actions.service.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/atem-server/src/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/app.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/atem/atem.interface.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.interface.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/atem/atem.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/atem/atem.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/macros/macros.gateway.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/macros/macros.gateway.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/settings/device.entity.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/atem/atem.gateway.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.gateway.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/core/actions/ActionSetPreview.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/core/actions/ActionSetPreview.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/atem-server/src/core/actions/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/core/actions/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -154,7 +119,7 @@
       <workItem from="1605248552901" duration="17000" />
       <workItem from="1605353300561" duration="1473000" />
       <workItem from="1605516794988" duration="2010000" />
-      <workItem from="1605786942826" duration="17209000" />
+      <workItem from="1605786942826" duration="24272000" />
     </task>
     <servers />
   </component>
@@ -234,6 +199,10 @@
     <state x="-212" y="-1199" width="1333" height="1008" key="dock-window-2/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1604040329055" />
     <state x="0" y="23" width="1333" height="1008" key="dock-window-2/0.23.1680.1027@0.23.1680.1027" timestamp="1604040714358" />
     <state x="366" y="262" width="776" height="1187" key="dock-window-2/1193.1915.1680.1025/0.25.3360.1865@0.25.3360.1865" timestamp="1605914414915" />
+    <state x="273" y="1201" width="820" height="672" key="dock-window-3" timestamp="1605932107049">
+      <screen x="0" y="25" width="3360" height="1865" />
+    </state>
+    <state x="273" y="1201" width="820" height="672" key="dock-window-3/1193.1915.1680.1025/0.25.3360.1865@0.25.3360.1865" timestamp="1605932107049" />
     <state x="1076" y="291" width="1210" height="1338" key="find.popup" timestamp="1605917068633">
       <screen x="0" y="25" width="3360" height="1865" />
     </state>
@@ -251,7 +220,7 @@
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="505" y="248" key="run.anything.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1603785575589" />
-    <state x="1912" y="590" width="1340" height="1301" key="search.everywhere.popup" timestamp="1605925350595">
+    <state x="1912" y="590" width="1340" height="1301" key="search.everywhere.popup" timestamp="1605935559639">
       <screen x="0" y="25" width="3360" height="1865" />
     </state>
     <state x="956" y="318" width="670" height="732" key="search.everywhere.popup/0.0.1680.1050@0.0.1680.1050" timestamp="1602993513804" />
@@ -260,7 +229,7 @@
     <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603598658916" />
     <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1604999409630" />
     <state x="956" y="317" width="670" height="676" key="search.everywhere.popup/0.23.1680.970@0.23.1680.970" timestamp="1602934096279" />
-    <state x="1912" y="590" width="1340" height="1301" key="search.everywhere.popup/1193.1915.1680.1025/0.25.3360.1865@0.25.3360.1865" timestamp="1605925350595" />
+    <state x="1912" y="590" width="1340" height="1301" key="search.everywhere.popup/1193.1915.1680.1025/0.25.3360.1865@0.25.3360.1865" timestamp="1605935559639" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

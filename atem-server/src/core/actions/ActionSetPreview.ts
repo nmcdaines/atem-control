@@ -16,6 +16,7 @@ export class ActionSetPreview implements IServerAction<ISetPreviewProperties> {
   }
 
   async execute(atem: Atem): Promise<void | undefined> {
+    if (!atem) { return; }
     await atem.changePreviewInput(this.properties.input);
   }
 }
