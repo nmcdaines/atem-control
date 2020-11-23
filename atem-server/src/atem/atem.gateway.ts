@@ -10,6 +10,7 @@ import { Logger } from '@nestjs/common';
 import { Socket, Server } from 'socket.io';
 import { AtemService } from "./atem.service";
 import { Device } from "./device.entity";
+// import {} from ""
 
 @WebSocketGateway()
 export class AtemGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -55,6 +56,11 @@ export class AtemGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     }, {});
 
     client.emit('state:initial', atemStates);
+  }
+
+  @SubscribeMessage('ptz')
+  async ptx(client: Socket, payload: string) {
+
   }
 
   afterInit(server: Server) {
