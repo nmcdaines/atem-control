@@ -3,31 +3,41 @@ volumes:
     postgres-data:
     pgadmin-data:
 services:
-  postgres:
-    container_name: postgres
-    image: postgres:latest
-    ports:
-      - "5432:5432"
-    env_file:
-      - docker.env
-    networks:
-      - postgres
-    volumes:
-      - "postgres-data:/data/postgres"
-
-  pgadmin:
-    links:
-      - postgres:postgres
-    container_name: pgadmin
-    image: dpage/pgadmin4
-    ports:
-      - "8081:80"
-    env_file:
-      - docker.env
-    networks:
-      - postgres
-    volumes:
-      - "pgadmin-data:/root/.pgadmin"
+#  postgres:
+#    container_name: postgres
+#    image: arm32v7/postgres
+#    ports:
+#      - "5432:5432"
+#    env_file:
+#      - docker.env
+#    networks:
+#      - postgres
+#    volumes:
+#      - "postgres-data:/var/lib/postgresql/data"
+#
+#  pgadmin:
+#    links:
+#      - postgres:postgresstgres:
+  ##    container_name: postgres
+  ##    image: arm32v7/postgres
+  ##    ports:
+  ##      - "5432:5432"
+  ##    env_file:
+  ##      - docker.env
+  ##    networks:
+  ##      - postgres
+  ##    volumes:
+  ##      - "postgre
+#    container_name: pgadmin
+#    image: dpage/pgadmin4
+#    ports:
+#      - "8081:80"
+#    env_file:
+#      - docker.env
+#    networks:
+#      - postgres
+#    volumes:
+#      - "pgadmin-data:/root/.pgadmin"
 
 #  backend:
 #    build: ./atem-server
@@ -43,8 +53,10 @@ services:
     container_name: restreamer
     expose:
       - "8080"
+      - "1935"
     ports:
       - "8080:8080"
+      - "1935:1935"
     environment:
       - RS_USERNAME=admin
       - RS_PASSWORD=admin
