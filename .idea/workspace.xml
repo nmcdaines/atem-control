@@ -23,17 +23,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="540b02d6-515e-4e92-95e6-cfc882479295" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/visca-ip/.npmignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visca-ip/Readme.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visca-ip/package-lock.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visca-ip/package.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visca-ip/src/CommandTypes.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visca-ip/src/commandGenerators.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visca-ip/src/enums.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visca-ip/src/index.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visca-ip/src/socket.ts" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/visca-ip/tsconfig.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visca-ip/babel.config.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/visca-ip/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/visca-ip/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/visca-ip/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/visca-ip/package.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -46,6 +39,7 @@
         <option value="tsconfig.json" />
         <option value="TypeScript JSX File" />
         <option value="TypeScript File" />
+        <option value="JavaScript File" />
       </list>
     </option>
   </component>
@@ -144,7 +138,7 @@
       <workItem from="1605353300561" duration="1473000" />
       <workItem from="1605516794988" duration="2010000" />
       <workItem from="1605786942826" duration="48144000" />
-      <workItem from="1606121155127" duration="13515000" />
+      <workItem from="1606121155127" duration="15540000" />
     </task>
     <servers />
   </component>
