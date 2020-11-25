@@ -23,9 +23,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="540b02d6-515e-4e92-95e6-cfc882479295" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/visca-ip/.npmignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visca-ip/Readme.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visca-ip/package-lock.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visca-ip/package.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visca-ip/src/CommandTypes.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visca-ip/src/commandGenerators.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visca-ip/src/enums.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visca-ip/src/index.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visca-ip/src/socket.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/visca-ip/tsconfig.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/atem-server/src/atem/atem.gateway.ts" beforeDir="false" afterPath="$PROJECT_DIR$/atem-server/src/atem/atem.gateway.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,8 +44,8 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="tsconfig.json" />
-        <option value="TypeScript File" />
         <option value="TypeScript JSX File" />
+        <option value="TypeScript File" />
       </list>
     </option>
   </component>
@@ -60,23 +68,16 @@
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="com.intellij.ide.scratch.LRUPopupBuilder$1/New Scratch File" value="TEXT" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/atem-client/package.json" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
     <property name="nodejs_package_manager_path" value="npm" />
-    <property name="settings.editor.selected.configurable" value="preferences.lookFeel" />
-    <property name="ts.external.directory.path" value="$PROJECT_DIR$/atem-client/node_modules/typescript/lib" />
+    <property name="settings.editor.selected.configurable" value="preferences.keymap" />
+    <property name="ts.external.directory.path" value="C:\Users\nmcda\developer\atem-control\atem-lib\node_modules\typescript\lib" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/atem-server/src/core" />
-      <recent name="$PROJECT_DIR$/atem-server/src" />
-      <recent name="$PROJECT_DIR$/atem-server/src/actions" />
-      <recent name="C:\Users\nmcda\projects\atem-control\atem-client\src\containers\Livestream" />
-      <recent name="$PROJECT_DIR$" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/atem-server/src/core/actions" />
@@ -84,6 +85,39 @@
       <recent name="$PROJECT_DIR$/atem-server/core/actions" />
       <recent name="$PROJECT_DIR$/atem-client/src/core/actions" />
     </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\nmcda\developer\atem-control\visca-ip\src" />
+      <recent name="$PROJECT_DIR$/atem-server/src/core" />
+      <recent name="$PROJECT_DIR$/atem-server/src" />
+      <recent name="$PROJECT_DIR$/atem-server/src/actions" />
+      <recent name="C:\Users\nmcda\projects\atem-control\atem-client\src\containers\Livestream" />
+    </key>
+  </component>
+  <component name="RunManager" selected="npm.Server: Development">
+    <configuration name="Client Development" type="js.build_tools.npm" singleton="false">
+      <package-json value="$PROJECT_DIR$/atem-client/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="start" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <configuration name="Server: Development" type="js.build_tools.npm" singleton="false">
+      <package-json value="$PROJECT_DIR$/atem-server/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="start:dev" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="npm.Client Development" />
+      <item itemvalue="npm.Server: Development" />
+    </list>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -110,6 +144,7 @@
       <workItem from="1605353300561" duration="1473000" />
       <workItem from="1605516794988" duration="2010000" />
       <workItem from="1605786942826" duration="48144000" />
+      <workItem from="1606121155127" duration="13515000" />
     </task>
     <servers />
   </component>
@@ -146,9 +181,10 @@
     </state>
     <state x="593" y="216" key="#TypeScript/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604209298696" />
     <state x="546" y="212" key="#TypeScript/0.23.1680.1027@0.23.1680.1027" timestamp="1604046907888" />
-    <state x="550" y="256" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1603443457259">
-      <screen x="0" y="23" width="1680" height="1027" />
+    <state x="-2211" y="442" width="1089" height="737" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1606121661316">
+      <screen x="-3840" y="0" width="3072" height="1688" />
     </state>
+    <state x="-2211" y="442" width="1089" height="737" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.3072.1688/-3840.0.3072.1688@-3840.0.3072.1688" timestamp="1606121661316" />
     <state x="550" y="256" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603443457259" />
     <state x="550" y="243" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.23.1680.970@0.23.1680.970" timestamp="1602934097655" />
     <state x="281" y="295" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1604385010307">
@@ -166,26 +202,50 @@
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="578" y="290" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog/0.23.1680.1027@0.23.1680.1027" timestamp="1605070023735" />
-    <state x="693" y="343" key="FileChooserDialogImpl" timestamp="1604665045410">
-      <screen x="0" y="0" width="1824" height="1176" />
+    <state x="-2673" y="492" key="FileChooserDialogImpl" timestamp="1606121642376">
+      <screen x="-3840" y="0" width="3072" height="1688" />
     </state>
     <state x="693" y="343" key="FileChooserDialogImpl/0.0.1824.1176@0.0.1824.1176" timestamp="1604665045410" />
-    <state x="328" y="145" key="SettingsEditor" timestamp="1604999260582">
-      <screen x="0" y="23" width="1680" height="1027" />
+    <state x="-2673" y="492" key="FileChooserDialogImpl/0.0.3072.1688/-3840.0.3072.1688@-3840.0.3072.1688" timestamp="1606121642376" />
+    <state width="1524" height="185" key="GridCell.Tab.0.bottom" timestamp="1606191570648">
+      <screen x="-3840" y="0" width="3072" height="1688" />
+    </state>
+    <state width="1524" height="185" key="GridCell.Tab.0.bottom/0.0.3072.1688/-3840.0.3072.1688@-3840.0.3072.1688" timestamp="1606191570648" />
+    <state width="1524" height="185" key="GridCell.Tab.0.center" timestamp="1606191570648">
+      <screen x="-3840" y="0" width="3072" height="1688" />
+    </state>
+    <state width="1524" height="185" key="GridCell.Tab.0.center/0.0.3072.1688/-3840.0.3072.1688@-3840.0.3072.1688" timestamp="1606191570648" />
+    <state width="1524" height="185" key="GridCell.Tab.0.left" timestamp="1606191570647">
+      <screen x="-3840" y="0" width="3072" height="1688" />
+    </state>
+    <state width="1524" height="185" key="GridCell.Tab.0.left/0.0.3072.1688/-3840.0.3072.1688@-3840.0.3072.1688" timestamp="1606191570647" />
+    <state width="1524" height="185" key="GridCell.Tab.0.right" timestamp="1606191570648">
+      <screen x="-3840" y="0" width="3072" height="1688" />
+    </state>
+    <state width="1524" height="185" key="GridCell.Tab.0.right/0.0.3072.1688/-3840.0.3072.1688@-3840.0.3072.1688" timestamp="1606191570648" />
+    <state x="356" y="140" key="SettingsEditor" timestamp="1606248952640">
+      <screen x="0" y="0" width="1824" height="1176" />
     </state>
     <state x="356" y="140" key="SettingsEditor/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604384085524" />
+    <state x="356" y="140" key="SettingsEditor/0.0.1824.1176@0.0.1824.1176" timestamp="1606248952640" />
+    <state x="-3240" y="201" key="SettingsEditor/0.0.3072.1688/-3840.0.3072.1688@-3840.0.3072.1688" timestamp="1606200116987" />
     <state x="912" y="-1259" key="SettingsEditor/0.23.1680.1027/-1193.-2137.3840.2137@-1193.-2137.3840.2137" timestamp="1603499661605" />
     <state x="328" y="145" key="SettingsEditor/0.23.1680.1027@0.23.1680.1027" timestamp="1604999260581" />
-    <state x="2359" y="38" width="778" height="1412" key="dock-window-1" timestamp="1605987962592">
-      <screen x="0" y="25" width="3360" height="1865" />
+    <state x="-1616" y="63" width="834" height="1420" key="dock-window-1" timestamp="1606121661696">
+      <screen x="-3840" y="0" width="3072" height="1688" />
     </state>
+    <state x="-1616" y="63" width="834" height="1420" key="dock-window-1/0.0.3072.1688/-3840.0.3072.1688@-3840.0.3072.1688" timestamp="1606121661696" />
     <state x="1266" y="-1122" width="1333" height="833" key="dock-window-1/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1604040329055" />
     <state x="299" y="23" width="1333" height="833" key="dock-window-1/0.23.1680.1027@0.23.1680.1027" timestamp="1604040714358" />
     <state x="0" y="25" width="840" height="1025" key="dock-window-1/0.25.1680.1025@0.25.1680.1025" timestamp="1605954978770" />
     <state x="2359" y="38" width="778" height="1412" key="dock-window-1/1193.1915.1680.1025/0.25.3360.1865@0.25.3360.1865" timestamp="1605987962592" />
-    <state x="366" y="262" width="776" height="1187" key="dock-window-2" timestamp="1605914414915">
-      <screen x="0" y="25" width="3360" height="1865" />
+    <state x="-5" y="0" width="1412" height="831" key="dock-window-2" timestamp="1606287942866">
+      <screen x="0" y="0" width="1824" height="1176" />
     </state>
+    <state x="-7" y="0" width="1229" height="1183" key="dock-window-2/0.0.1216.1784@0.0.1216.1784" timestamp="1606251087585" />
+    <state x="85" y="52" width="1273" height="981" key="dock-window-2/0.0.1707.1040@0.0.1707.1040" timestamp="1606219615038" />
+    <state x="-5" y="0" width="1412" height="831" key="dock-window-2/0.0.1824.1176@0.0.1824.1176" timestamp="1606287942866" />
+    <state x="-6" y="0" width="1694" height="997" key="dock-window-2/0.0.3072.1688/-3840.0.3072.1688@-3840.0.3072.1688" timestamp="1606251471195" />
     <state x="-212" y="-1199" width="1333" height="1008" key="dock-window-2/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1604040329055" />
     <state x="0" y="23" width="1333" height="1008" key="dock-window-2/0.23.1680.1027@0.23.1680.1027" timestamp="1604040714358" />
     <state x="366" y="262" width="776" height="1187" key="dock-window-2/1193.1915.1680.1025/0.25.3360.1865@0.25.3360.1865" timestamp="1605914414915" />
@@ -221,12 +281,13 @@
       <screen x="0" y="23" width="1680" height="1027" />
     </state>
     <state x="505" y="248" key="run.anything.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1603785575589" />
-    <state x="1912" y="590" width="1340" height="1301" key="search.everywhere.popup" timestamp="1605990377758">
-      <screen x="0" y="25" width="3360" height="1865" />
+    <state x="1039" y="356" width="728" height="820" key="search.everywhere.popup" timestamp="1606250562530">
+      <screen x="0" y="0" width="1824" height="1176" />
     </state>
     <state x="956" y="318" width="670" height="732" key="search.everywhere.popup/0.0.1680.1050@0.0.1680.1050" timestamp="1602993513804" />
     <state x="1038" y="356" width="728" height="820" key="search.everywhere.popup/0.0.1824.1176/2736.-349.3072.1688@0.0.1824.1176" timestamp="1604386794285" />
-    <state x="1038" y="356" width="728" height="820" key="search.everywhere.popup/0.0.1824.1176@0.0.1824.1176" timestamp="1604472616068" />
+    <state x="1039" y="356" width="728" height="820" key="search.everywhere.popup/0.0.1824.1176@0.0.1824.1176" timestamp="1606250562530" />
+    <state x="-2092" y="510" width="1226" height="1178" key="search.everywhere.popup/0.0.3072.1688/-3840.0.3072.1688@-3840.0.3072.1688" timestamp="1606201009972" />
     <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027/-1193.-2137.3840.2137@0.23.1680.1027" timestamp="1603598658916" />
     <state x="956" y="334" width="670" height="716" key="search.everywhere.popup/0.23.1680.1027@0.23.1680.1027" timestamp="1604999409630" />
     <state x="956" y="317" width="670" height="676" key="search.everywhere.popup/0.23.1680.970@0.23.1680.970" timestamp="1602934096279" />
