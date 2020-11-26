@@ -3,8 +3,8 @@
 // [SendPacketType.CMD, CommandType.CAM,
 
 export enum SendPacketType {
-    CMD = 0x8001,
-    INQ = 0x8009,
+    CMD = 0x8101,
+    INQ = 0x8109,
 }
 
 export enum CommandType {
