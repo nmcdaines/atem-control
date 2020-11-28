@@ -30,6 +30,7 @@ const useStyles = makeStyles((theme: Theme) =>
 
 const links = [
   {text: 'SURFACE', to: '/surface'},
+  {text: 'CAMERA', to: '/camera'},
   {text: 'SHORTCUTS', to: '/shortcuts'},
   {text: 'SETTINGS', to: '/settings'},
   {text: 'LIVESTREAM', to: '/livestream'},

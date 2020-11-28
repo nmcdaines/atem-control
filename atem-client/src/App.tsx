@@ -14,28 +14,21 @@ import SurfaceContainer from "./containers/Surface";
 import SettingsContainer from "./containers/Settings";
 import ShortcutsContainer from "./containers/Shortcuts";
 import LivestreamContainer from "./containers/Livestream";
+import CameraContainer from "./containers/Camera";
 
-import { SocketProvider } from "./core/SocketContext"
+import { SocketProvider, useSocket } from "./core/SocketContext";
 
-// const socket = io('ws://localhost:3000', { });
-
-
+import CameraControl from './components/CameraControl';
 
 function App() {
   const [atemState, setAtemState] = useState<any>();
   const [messageType, setMessageType] = useState('');
   const [messageBody, setMessageBody] = useState('{}');
 
-  // useEffect(() => {
-  //   socket.on('state:change', (val: any) => {
-  //     console.log(val);
-  //     setAtemState(val);
-  //   });
-  // });
+  const socket = useSocket();
 
   return (
     <div className="App">
-
         <Router>
           <AppBar />
 
@@ -44,6 +37,7 @@ function App() {
             <Route path="/surface" component={SurfaceContainer} />
             <Route path="/settings" component={SettingsContainer} />
             <Route path="/livestream" component={LivestreamContainer} />
+            <Route path="/camera" component={CameraContainer} />
           </Switch>
         </Router>
 
