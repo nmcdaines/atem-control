@@ -12,9 +12,9 @@ import { AtemService } from "./atem.service";
 import { Device } from "./device.entity";
 // import {} from ""
 
-import { ViscaCommands, ViscaDevice } from 'sony-visca-connection';
 
-const device = new ViscaDevice('192.168.1.28');
+
+
 
 @WebSocketGateway()
 export class AtemGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -23,31 +23,6 @@ export class AtemGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('AppGateway');
-
-  @SubscribeMessage('camera:pantilt')
-  handleCameraPanTilt(client: Socket, payload: any) {
-    console.log('handleCameraPanTilt', payload);
-
-    const cmd = new ViscaCommands.PanTiltDirectDriveCommand();
-    cmd.panSpeed = payload.panSpeed;
-    cmd.tiltSpeed = payload.tiltSpeed;
-
-    cmd.panPosition = payload.panPosition;
-    cmd.tiltPosition = payload.tiltPosition;
-
-    device.sendCommand(cmd);
-  }
-
-  @SubscribeMessage('camera:zoom')
-  handeCameraZoom(client: Socket, payload: any) {
-    console.log('handeCameraZoom', payload);
-
-    const cmd = new ViscaCommands.ZoomDirectCommand();
-
-    cmd.position = payload.position;
-
-    device.sendCommand(cmd);
-  }
 
   @SubscribeMessage('device:create')
   handleDeviceCreate(client: Socket, payload: any) {

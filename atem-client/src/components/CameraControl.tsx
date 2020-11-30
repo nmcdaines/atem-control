@@ -31,6 +31,13 @@ function CameraControl({ pan, setPan, tilt, setTilt, zoom, setZoom }: any) {
         setZoom(getNumber(newValue));
     }
 
+    
+    // What we care about it getting a "zoom increment"
+    const zoomIncrement = (100/16384) * zoom;
+    console.log(zoomIncrement);
+    const zoomPercentage = 100 - zoomIncrement;
+    console.log(zoomPercentage);
+
     return (
         <div style={{ width: '700px', paddingBottom: 20 }}>
             <div style={{ width: '100%', display: 'flex' }}>
@@ -61,8 +68,8 @@ function CameraControl({ pan, setPan, tilt, setTilt, zoom, setZoom }: any) {
                                 marginTop: `${((100/1116) * (tilt * -1 ) )}%`,
 
                                 transform: `translateX(-50%) translateY(-50%)`,
-                                width: `${100 - ((100/18018) * zoom)}%`,
-                                height: `${100 - ((100/18018) * zoom)}%`,
+                                width: `${zoomPercentage}%`,
+                                height: `${zoomPercentage}%`,
                                 boxShadow: 'inset 0 0 0 2px red',
                             }}
                         />
@@ -75,8 +82,8 @@ function CameraControl({ pan, setPan, tilt, setTilt, zoom, setZoom }: any) {
                     <Slider
                         orientation="vertical"
 
-                        min={-1116}
-                        max={372}
+                        min={-438}
+                        max={273}
                         defaultValue={0}
                         
                         track={false}
@@ -86,7 +93,8 @@ function CameraControl({ pan, setPan, tilt, setTilt, zoom, setZoom }: any) {
                         marks={[
                             { value: 372, label: 'Up' },
                             { value: 0, label: '0'},
-                            { value: -1116, label: 'Down' }
+                            // { value: -1116, label: 'Down' }
+                            { value: -438, label: 'Down'},
                         ]}
                     />
                 </div>
@@ -95,14 +103,16 @@ function CameraControl({ pan, setPan, tilt, setTilt, zoom, setZoom }: any) {
             <div className="controls-horizontal-pan" style={{ paddingRight: 30 }}>
                 <Slider
                     value={pan}
-                    min={-2216}
-                    max={2216}
+                    min={-550}
+                    max={550}
                     track={false}
                     onChange={handlePanChange}
                     marks={[
-                        { value: 2216, label: 'R' },
+                        // { value: 2216, label: 'R' },
+                        { value: 550, label: 'R' },
                         { value: 0, label: '0'},
-                        { value: -2216, label: 'L' }
+                        // { value: -2216, label: 'L' }
+                        { value: -550, label: 'L' }
                     ]}
                 />
             </div>   

@@ -23,7 +23,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       AtemModule,
       // SettingsModule,
       NetworkModule,
-      // MacrosModule,
+      MacrosModule,
       // ShortcutsModule,
       // LivestreamModule,
       ActionsModule

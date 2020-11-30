@@ -45,6 +45,8 @@ function Camera() {
       tiltPosition: tilt,
     });
 
+    console.log(zoom);
+
     socket?.emit('camera:zoom', {
       position: zoom,
     });
