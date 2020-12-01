@@ -13,6 +13,8 @@ import { LivestreamModule } from './livestream/livestream.module';
 import { DatabaseModule } from './database/database.module';
 import { ActionsModule } from './actions/actions.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { DevicesModule } from './devices/devices.module';
+
 
 @Module({
   imports: [
@@ -26,7 +28,8 @@ import { ScheduleModule } from '@nestjs/schedule';
       MacrosModule,
       // ShortcutsModule,
       // LivestreamModule,
-      ActionsModule
+      ActionsModule,
+      DevicesModule
   ],
   controllers: [AppController],
   providers: [AppService, AppGateway],
