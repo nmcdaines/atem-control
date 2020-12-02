@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config'
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppGateway } from './app.gateway' 
-import { SettingsModule } from './settings/settings.module';
 import { NetworkModule } from './network/network.module';
 import { MacrosModule } from './macros/macros.module';
 import { ShortcutsModule } from './shortcuts/shortcuts.module';
@@ -20,8 +19,7 @@ import { DevicesModule } from './devices/devices.module';
       ScheduleModule.forRoot(),
 
       DatabaseModule,
-      AtemModule,
-      // SettingsModule,
+
       NetworkModule,
       MacrosModule,
       // ShortcutsModule,
