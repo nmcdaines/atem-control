@@ -1,12 +1,13 @@
 import {Inject, Injectable} from '@nestjs/common';
-import {AtemService} from "../atem/atem.service";
+import { DevicesService } from "../devices/devices.service";
 
 import { objectToAction, IServerAction } from 'src/core/actions';
+import { Device, AtemDevice } from 'src/core/devices';
 
 @Injectable()
 export class ActionsService {
   constructor(
-    private atemService: AtemService
+    private devicesService: DevicesService
   ) {}
 
 
@@ -15,8 +16,13 @@ export class ActionsService {
 
     console.log(action);
 
-    const atem = this.atemService.getAtem(deviceId).atem;
-    if (!atem) { return; }
-    await action.execute(atem);
+    const connection = this.devicesService.getConnection(deviceId);
+
+    if (
+      !connection || 
+      !(connection instanceof AtemDevice) || 
+      !connection?.atem
+    ) { return; }
+    await action.execute(connection.atem);
   }
 }

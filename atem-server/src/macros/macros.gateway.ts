@@ -8,7 +8,7 @@ import {
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { AtemService } from "../atem/atem.service";
+import { DevicesService } from "../devices/devices.service";
 
 import { Commands } from 'atem-connection';
 import { IsAtKeyFrame } from "atem-connection/dist/enums";
@@ -33,7 +33,7 @@ const viscaDevice = new ViscaDevice('192.168.1.28');
 export class MacrosGateway {
   constructor(
     private readonly macroService: MacrosService,
-    private readonly atemService: AtemService,
+    private readonly devicesService: DevicesService,
     private readonly actionsService: ActionsService,
   ) { }
 
@@ -98,7 +98,9 @@ export class MacrosGateway {
   async handleMacroExecute(client: Socket, payload: IMacro) {
     await Promise.all(payload.steps.map(async (step) => {
       if (step.device === 'atem') {
-        const devices = await this.atemService.listDevices();
+        // TODO: not sure that we need to execute this on all devices
+        
+        const devices = await this.devicesService.listDevices();
         await Promise.all(devices.map(async (device) => {
           await this.actionsService.execute(device.id, step.command, step.properties);
         }))

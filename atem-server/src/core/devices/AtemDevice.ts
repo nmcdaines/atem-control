@@ -38,4 +38,12 @@ export class AtemDevice extends Device {
     getState(): AtemState {
       return this.atem.state;
     }
+
+    destroy(): void | Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+
+    getAtem(): Atem {
+        return this.atem;
+    }
   }

@@ -37,4 +37,5 @@ export abstract class Device {
   };
 
   // abstract execute(action: IAction);
+  abstract destroy(): Promise<void> | void;
 }

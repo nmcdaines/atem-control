@@ -5,8 +5,6 @@ import { AppService } from './app.service';
 import { AppGateway } from './app.gateway' 
 import { SettingsModule } from './settings/settings.module';
 import { NetworkModule } from './network/network.module';
-// import { AtemService } from './atem/atem.service';
-import { AtemModule } from "./atem/atem.module";
 import { MacrosModule } from './macros/macros.module';
 import { ShortcutsModule } from './shortcuts/shortcuts.module';
 import { LivestreamModule } from './livestream/livestream.module';

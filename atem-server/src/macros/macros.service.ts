@@ -1,6 +1,6 @@
 import {Injectable, Logger} from '@nestjs/common';
 import {ActionsService} from "../actions/actions.service";
-import {AtemService} from "../atem/atem.service";
+import {DevicesService} from "../devices/devices.service";
 import {Macro} from "./macro.entity";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
@@ -12,7 +12,7 @@ export class MacrosService {
   constructor(
     @InjectRepository(Macro)
     private macroRepository: Repository<Macro>,
-    private atemService: AtemService,
+    private devicesService: DevicesService,
     private actionsService: ActionsService,
   ) {}
 

@@ -1,6 +1,8 @@
 import { ViscaDevice, InquiryCommands } from "sony-visca-connection";
 import { Device, IHooks } from './Device';
 
+const POLL_TIME = 200;
+
 interface IViscaDeviceMap {
   [key: string]: any;
   pan?: number | undefined;
@@ -11,6 +13,7 @@ interface IViscaDeviceMap {
 export class BirddogDevice extends Device {
   viscaDevice: ViscaDevice;
   private state: IViscaDeviceMap = {};
+  private timeout?: NodeJS.Timeout;
 
   constructor(
     public readonly id: string,
@@ -58,10 +61,12 @@ export class BirddogDevice extends Device {
     this.status = 'connected';
     super.onConnected();
     this.getInitialState();
+    this.timeout = setInterval(this.inquire, POLL_TIME);
   }
   onDisconnected(): void {
     this.status = 'disconnected';
     super.onDisconnected();
+    clearInterval(this.timeout);
   }
   onStateChange(state: IViscaDeviceMap): void {
     super.onStateChange(state);
@@ -69,5 +74,9 @@ export class BirddogDevice extends Device {
 
   getState(): IViscaDeviceMap {
     return this.state;
+  }
+
+  destroy(): void | Promise<void> {
+    throw new Error("Method not implemented.");
   }
 }  

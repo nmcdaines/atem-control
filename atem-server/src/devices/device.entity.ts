@@ -10,4 +10,7 @@ export class Device {
 
     @Column()
     name: string;
+
+    @Column()
+    type: 'atem' | 'birddog';
 }
