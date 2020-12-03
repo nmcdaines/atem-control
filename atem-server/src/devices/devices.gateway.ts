@@ -19,7 +19,7 @@ export class DevicesGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   ) {}
   
   @WebSocketServer() server: Server;
-  private logger: Logger = new Logger('AppGateway');
+  private logger: Logger = new Logger('DevicesGateway');
 
 
   @SubscribeMessage('device:create')
@@ -42,6 +42,12 @@ export class DevicesGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   @SubscribeMessage('device:delete')
   async handleDeviceDelete(client: Socket, payload: any) {
     this.devicesService.deleteDevice(payload.id);
+  }
+
+  @SubscribeMessage('device:list')
+  async handleDevicesList(client: Socket, payload: any) {
+    const devices = await this.devicesService.listDevices();
+    client.emit('response:device:list', devices);
   }
 
   // Send initial device state

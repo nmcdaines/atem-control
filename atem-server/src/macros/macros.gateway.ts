@@ -40,33 +40,6 @@ export class MacrosGateway {
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('MacrosGateway');
 
-  @SubscribeMessage('camera:pantilt')
-  async handleCameraPanTilt(client: Socket, payload: any) {
-    this.logger.log('handleCameraPanTilt', payload);
-    console.log(payload);
-
-    const cmd = new ViscaCommands.PanTiltDirectDriveCommand();
-    cmd.panSpeed = payload.panSpeed;
-    cmd.tiltSpeed = payload.tiltSpeed;
-
-    cmd.panPosition = payload.panPosition;
-    cmd.tiltPosition = payload.tiltPosition;
-
-    await viscaDevice.sendCommand(cmd);
-  }
-
-  @SubscribeMessage('camera:zoom')
-  async handeCameraZoom(client: Socket, payload: any) {
-    // this.logger.log('handeCameraZoom');
-    console.log(payload);
-
-    const cmd = new ViscaCommands.ZoomDirectCommand();
-
-    cmd.position = payload.position;
-
-    await viscaDevice.sendCommand(cmd);
-  }
-
   @SubscribeMessage('macro:create')
   handleMacroCreate(client: Socket, payload: IMacro) {
     const macro = new Macro();
@@ -92,6 +65,12 @@ export class MacrosGateway {
   @SubscribeMessage('macro:delete')
   handleMacroDelete(client: Socket, payload: string) {
     return this.macroService.deleteMacro(payload);
+  }
+
+  @SubscribeMessage('macro:list')
+  async handleMacroList(client: Socket, payload: string) {
+    const macros = await this.macroService.listMacro();
+    client.emit('response:macro:list', macros);
   }
 
   @SubscribeMessage('macro:execute')
