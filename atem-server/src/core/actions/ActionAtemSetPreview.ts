@@ -1,12 +1,12 @@
 import { ActionType } from 'atem-lib';
 import { IServerAction } from "./index";
-import { Atem } from "atem-connection";
+import { AtemDevice } from '../devices';
 
 export interface ISetPreviewProperties {
   input: number;
 }
 
-export class ActionSetPreview implements IServerAction<ISetPreviewProperties> {
+export class ActionAtemSetPreview implements IServerAction<ISetPreviewProperties> {
   type: ActionType;
   properties: ISetPreviewProperties;
 
@@ -15,8 +15,8 @@ export class ActionSetPreview implements IServerAction<ISetPreviewProperties> {
     this.properties = props;
   }
 
-  async execute(atem: Atem): Promise<void | undefined> {
-    if (!atem) { return; }
-    await atem.changePreviewInput(this.properties.input);
+  async execute(device: AtemDevice): Promise<void | undefined> {
+    if (!device?.atem) { return; }
+    await device?.atem.changePreviewInput(this.properties.input);
   }
 }

@@ -14,7 +14,11 @@ enum ActionType {
   LIVESTREAM_START = "LIVESTREAM_START",
   LIVESTREAM_STOP = "LIVESTREAM_STOP",
 
-  SET_INPUT_NAME = "NAME",
+  SET_INPUT_NAME = "SET_INPUT_NAME",
+
+
+  VISCA_SET_PAN_TILT = "VISCA_SET_PAN_TILT",    // pan, tilt
+  VISCA_SET_ZOOM = "VISCA_SET_ZOOM",            // zoom
 }
 
 interface IAction<P> {
@@ -57,6 +61,15 @@ interface ITransitionCutProperties {
   input?: number;
 }
 
+interface IViscaSetPanTiltProperties {
+  pan: number,
+  tilt: number,
+}
+
+interface IViscaSetZoom {
+  zoom: number,
+}
+
 enum EDirection {
   ON = "ON",
   OFF = "OFF"
@@ -73,4 +86,6 @@ export {
   ITransitionCutProperties,
   ISetInputNameProperties,
   EDirection,
+  IViscaSetPanTiltProperties,
+  IViscaSetZoom,
 }

@@ -2,7 +2,7 @@ import { Atem, AtemState } from "atem-connection";
 import { Device, IHooks } from "./Device";
 
 export class AtemDevice extends Device {
-    atem: Atem;
+    public atem: Atem;
   
     constructor(
       public readonly id: string,
@@ -36,7 +36,7 @@ export class AtemDevice extends Device {
     }
   
     getState(): AtemState {
-      return this.atem.state;
+      return this.atem?.state;
     }
 
     destroy(): void | Promise<void> {

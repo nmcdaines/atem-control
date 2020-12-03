@@ -117,4 +117,8 @@ export class DevicesService {
   public getConnection(deviceId: string) {
     return this.deviceConnections.get(deviceId);
   }
+
+  public getConnections() {
+    return this.deviceConnections;
+  }
 }

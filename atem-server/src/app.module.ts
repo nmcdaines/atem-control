@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config'
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppGateway } from './app.gateway' 
-import { NetworkModule } from './network/network.module';
 import { MacrosModule } from './macros/macros.module';
 import { ShortcutsModule } from './shortcuts/shortcuts.module';
 import { LivestreamModule } from './livestream/livestream.module';
 import { DatabaseModule } from './database/database.module';
 import { ActionsModule } from './actions/actions.module';
-import { ScheduleModule } from '@nestjs/schedule';
 import { DevicesModule } from './devices/devices.module';
+
 
 
 @Module({
@@ -20,12 +20,11 @@ import { DevicesModule } from './devices/devices.module';
 
       DatabaseModule,
 
-      NetworkModule,
+      DevicesModule,
       MacrosModule,
-      // ShortcutsModule,
+      ShortcutsModule,
       // LivestreamModule,
       ActionsModule,
-      DevicesModule
   ],
   controllers: [AppController],
   providers: [AppService, AppGateway],

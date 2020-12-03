@@ -10,6 +10,7 @@ import { Logger } from '@nestjs/common';
 import { Socket, Server } from 'socket.io';
 import { DevicesService } from './devices.service';
 import { Device as DeviceEntity } from './device.entity';
+import { Device, AtemDevice, BirddogDevice } from 'src/core/devices';
 
 @WebSocketGateway()
 export class DevicesGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -44,23 +45,20 @@ export class DevicesGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   }
 
   // Send initial device state
-  // @SubscribeMessage('action:state:initial')
-  // async handleGetInitialState(client: Socket, payload: string) {
-  //   this.logger.log('action:state:initial was called');
+  @SubscribeMessage('device:state:initial')
+  async handleGetInitialState(client: Socket, payload: string) {
+    this.logger.log('device:state:initial was called');
 
-  //   const devices = await this.atemService.listDevices();
+    const deviceStates: { [key: string]: any } = {};
 
-  //   const atemStates = devices.reduce<any>((acc, val) => {
-  //       return {
-  //         ...acc,
-  //         [val.id]: this.atemService.getAtem(val.id).atem?.state,
-  //       }
-  //   }, {});
+    const connections = await this.devicesService.getConnections();
+    for (let key of connections.keys()) {
+      deviceStates[key] = connections.get(key).getState();
+    }
 
-  //   client.emit('state:initial', atemStates);
-  // }
+    client.emit('state:initial', deviceStates);
+  }
   
-
   afterInit(server: Server) {
     this.devicesService.server = this.server;
     this.devicesService.handleTryConnect();

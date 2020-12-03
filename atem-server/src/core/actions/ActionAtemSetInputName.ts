@@ -1,6 +1,6 @@
 import { ActionType, IAction } from 'atem-lib';
 import { IServerAction } from "./index";
-import { Atem } from "atem-connection";
+import { AtemDevice } from '../devices';
 
 export interface ISetInputNameProperties {
   input: number;
@@ -8,7 +8,7 @@ export interface ISetInputNameProperties {
   shortName: string;
 }
 
-export class ActionSetInputName implements IServerAction<ISetInputNameProperties> {
+export class ActionAtemSetInputName implements IServerAction<ISetInputNameProperties> {
   type: ActionType;
   properties: ISetInputNameProperties;
 
@@ -17,8 +17,8 @@ export class ActionSetInputName implements IServerAction<ISetInputNameProperties
     this.properties = props;
   }
 
-  async execute(atem: Atem): Promise<void | undefined> {
-    await atem.setInputSettings({
+  async execute(device: AtemDevice): Promise<void | undefined> {
+    await device?.atem?.setInputSettings({
       ...this.properties,
     })
   }

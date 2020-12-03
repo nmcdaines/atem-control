@@ -1,12 +1,12 @@
 import { ActionType } from 'atem-lib';
 import { IServerAction } from "./index";
-import { Atem } from "atem-connection";
+import { AtemDevice } from '../devices';
 
 export interface ITransitionAutoProperties {
   input?: number;
 }
 
-export class ActionTransitionAuto implements IServerAction<ITransitionAutoProperties> {
+export class ActionAtemTransitionAuto implements IServerAction<ITransitionAutoProperties> {
   type: ActionType;
   properties: ITransitionAutoProperties;
 
@@ -15,12 +15,12 @@ export class ActionTransitionAuto implements IServerAction<ITransitionAutoProper
     this.properties = props;
   }
 
-  async execute(atem: Atem): Promise<void | undefined> {
+  async execute(device: AtemDevice): Promise<void | undefined> {
     const { input } = this.properties;
     if (input) {
-      await atem.changePreviewInput(input);
+      await device?.atem?.changePreviewInput(input);
     }
 
-    await atem.autoTransition();
+    await device?.atem?.autoTransition();
   }
 }

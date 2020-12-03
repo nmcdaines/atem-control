@@ -1,12 +1,12 @@
 import { ActionType } from 'atem-lib';
 import { IServerAction } from "./index";
-import { Atem } from "atem-connection";
+import { AtemDevice } from '../devices';
 
 export interface ITransitionCutProperties {
   input?: number;
 }
 
-export class ActionTransitionCut implements IServerAction<ITransitionCutProperties> {
+export class ActionAtemTransitionCut implements IServerAction<ITransitionCutProperties> {
   type: ActionType;
   properties: ITransitionCutProperties;
 
@@ -15,12 +15,12 @@ export class ActionTransitionCut implements IServerAction<ITransitionCutProperti
     this.properties = props;
   }
 
-  async execute(atem: Atem): Promise<void | undefined> {
+  async execute(device: AtemDevice): Promise<void | undefined> {
     const { input } = this.properties;
     if (input) {
-      await atem.changePreviewInput(input);
+      await device?.atem?.changePreviewInput(input);
     }
 
-    await atem.cut();
+    await device?.atem?.cut();
   }
 }

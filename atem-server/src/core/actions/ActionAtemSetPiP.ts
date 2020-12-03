@@ -1,7 +1,7 @@
 import {ActionType} from 'atem-lib';
 import {IServerAction} from "./index";
-import {Atem} from "atem-connection";
 import {MixEffectKeyType} from "atem-connection/dist/enums";
+import { AtemDevice } from '../devices';
 
 export enum EDirection {
   ON = "ON",
@@ -17,7 +17,7 @@ export interface ISetPiPProperties {
   source?: number;
 }
 
-export class ActionSetPiP implements IServerAction<ISetPiPProperties> {
+export class ActionAtemSetPiP implements IServerAction<ISetPiPProperties> {
   type: ActionType;
   properties: ISetPiPProperties;
 
@@ -26,27 +26,27 @@ export class ActionSetPiP implements IServerAction<ISetPiPProperties> {
     this.properties = props;
   }
 
-  async execute(atem: Atem) {
+  async execute(device: AtemDevice) {
     const { direction, source, ...boxDimensions } = this.properties;
 
     const tasks = [
-      atem.setUpstreamKeyerType({ mixEffectKeyType: MixEffectKeyType.DVE }),
+      device?.atem?.setUpstreamKeyerType({ mixEffectKeyType: MixEffectKeyType.DVE }),
     ];
 
 
     if (direction) {
       tasks.push(
-        atem.setUpstreamKeyerOnAir(direction == 'ON')
+        device?.atem?.setUpstreamKeyerOnAir(direction == 'ON')
       );
     }
 
     await Promise.all(tasks);
 
     if (source) {
-      atem.setUpstreamKeyerFillSource(source);
+      device?.atem?.setUpstreamKeyerFillSource(source);
     }
 
     if (Object.keys(boxDimensions).length <= 0) return;
-    atem.setUpstreamKeyerDVESettings({ ...boxDimensions });
+    device?.atem?.setUpstreamKeyerDVESettings({ ...boxDimensions });
   }
 }

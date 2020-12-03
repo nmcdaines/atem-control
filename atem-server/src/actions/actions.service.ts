@@ -14,15 +14,7 @@ export class ActionsService {
   execute = async (deviceId: string, type: string, payload: any) => {
     const action: IServerAction<any> = objectToAction(type, payload);
 
-    console.log(action);
-
-    const connection = this.devicesService.getConnection(deviceId);
-
-    if (
-      !connection || 
-      !(connection instanceof AtemDevice) || 
-      !connection?.atem
-    ) { return; }
-    await action.execute(connection.atem);
+    const connection: any = this.devicesService.getConnection(deviceId);
+    await action.execute(connection);
   }
 }
