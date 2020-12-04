@@ -37,19 +37,20 @@ export class BirddogDevice extends Device {
     this.viscaDevice.disconnect();
   }
 
-  private async inquire(): Promise<void> {
+  private inquire = async (): Promise<void> => {
     const positionInquiry = new InquiryCommands.PanTiltPositionCommand();
     const zoomInqquiry = new InquiryCommands.ZoomPositionCommand();
 
-    const [positionResponse, zoomResponse]: any = await Promise.all([positionInquiry, zoomInqquiry]);
+    const [positionResponse, zoomResponse]: any = await Promise.all([
+      this.viscaDevice.sendCommand(positionInquiry),
+      this.viscaDevice.sendCommand(zoomInqquiry),
+    ]);
 
-    this.state = {
+    this.onStateChange({
       pan: positionResponse?.pan,
       tilt: positionResponse?.tilt,
       zoom: zoomResponse,
-    };
-
-    this.onStateChange(this.state);
+    });
   }
 
   private async getInitialState() {
@@ -69,7 +70,10 @@ export class BirddogDevice extends Device {
     clearInterval(this.timeout);
   }
   onStateChange = (state: IViscaDeviceMap): void => {
-    super.onStateChange(state);
+    if (JSON.stringify(this.state) !== JSON.stringify(state)) {
+      this.state = state;
+      super.onStateChange(state);
+    }
   }
 
   getState(): IViscaDeviceMap {

@@ -57,14 +57,14 @@ function Camera() {
     <div style={{ paddingTop: 20 }}>
       <Container>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <CameraControl
+          {/* <CameraControl
             pan={pan}
             setPan={setPan}
             tilt={tilt}
             setTilt={setTilt}
             zoom={zoom}
             setZoom={setZoom}
-          />
+          /> */}
 
           <div className="controls" style={{ paddingLeft: 10, maxWidth: '40%' }}>
             <div>
