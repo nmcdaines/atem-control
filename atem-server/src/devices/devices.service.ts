@@ -48,7 +48,7 @@ export class DevicesService {
     return connection;
   }
 
-  @Cron(CronExpression.EVERY_30_SECONDS)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async handleTryConnect() {
     const localDeviceIds = Object.keys(this.deviceConnections);
     const remoteDevices = await this.deviceRepository.find();
@@ -66,8 +66,6 @@ export class DevicesService {
     //
     await Promise.all(
       remoteDevices.map(async (device) => {
-        console.log(remoteDevices);
-
         const existingConnection = this.deviceConnections.get(device.id);
         const ipChanged = device.ipAddress != existingConnection?.ipAddress;
 

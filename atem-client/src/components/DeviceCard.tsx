@@ -25,7 +25,7 @@ const useStyles = makeStyles((theme: Theme) =>
   }),
 );
 
-function DeviceCard({ productIdentifier }: any) {
+function DeviceCard({ productIdentifier, device }: any) {
   const classes = useStyles();
 
 return (
@@ -36,13 +36,17 @@ return (
             <MoreVertIcon />
           </IconButton>
         }
-        title="ATEM Mini Pro ISO"
-        subheader="192.168.0.218"
+        title={device.name}
+        subheader={device.ip}
       />
       <CardContent>
         <Typography variant="body2" color="textSecondary" component="p">
-          { productIdentifier }
-
+          <div>
+            Id: { productIdentifier }
+          </div>
+          <div>
+            Type: { device.type }
+          </div>
         </Typography>
       </CardContent>
     </Card>

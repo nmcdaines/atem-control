@@ -51,6 +51,10 @@ function Surface() {
     <Container>
       { devices.map((deviceId: string) => {
 
+        if (atemState[deviceId]?.type === 'birddog') {
+          return <div key={`surface-${deviceId}`}></div>
+        }
+
         const { inputs, video } = atemState[deviceId] || {};
         const me = video.mixEffects[0];
 

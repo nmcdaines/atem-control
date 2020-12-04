@@ -10,6 +10,7 @@ import {
 import EditIcon from "@material-ui/icons/Edit";
 import AddIcon from "@material-ui/icons/Add";
 import { MacroForm } from "./MacroForm";
+import { useSocket, useMacros } from 'core/SocketContext';
 
 interface IMacro {
   id: string;
@@ -25,7 +26,7 @@ interface IStep {
 }
 
 
-function MacroViewItem() {
+function MacroViewItem({ macro }: any) {
   return (
     <Card style={{ marginBottom: 10 }}>
       <CardHeader
@@ -34,11 +35,11 @@ function MacroViewItem() {
             <EditIcon />
           </IconButton>
         }
-        title={"Hello world"}
+        title={macro.name}
       />
       <CardContent>
         <Typography variant="body2" color="textSecondary" component="p">
-          This is where some text goes
+          {macro.description}
         </Typography>
       </CardContent>
     </Card>
@@ -48,14 +49,26 @@ function MacroViewItem() {
 export default function Macros() {
   const [isOpen, setIsOpen] = useState(false);
   const [initialState, setInitialState] = useState({});
+  const socket = useSocket();
+  const macros = useMacros();
+  
+  function createMacro(macro: any) {
+    socket?.emit('macro:create', macro);
+    setIsOpen(false);
+  }
 
   return (
     <div>
-      <MacroViewItem />
-      <MacroViewItem />
-      <MacroViewItem />
-      <MacroViewItem />
-      <MacroViewItem />
+
+      { Object.keys(macros).map((macroId) => {
+
+        return (
+          <MacroViewItem
+            key={`macro-${macroId}`}
+            macro={macros[macroId]}
+          />
+        );
+      })}
 
       <Fab
         color="primary"
@@ -75,7 +88,8 @@ export default function Macros() {
       <MacroForm
         isOpen={isOpen}
         initialValues={initialState}
-        onSubmit={() => {}}
+        onSubmit={createMacro}
+        onCancel={() => setIsOpen(false)}
       />
     </div>
   );

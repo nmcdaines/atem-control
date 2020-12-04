@@ -41,14 +41,17 @@ export class MacrosGateway {
   private logger: Logger = new Logger('MacrosGateway');
 
   @SubscribeMessage('macro:create')
-  handleMacroCreate(client: Socket, payload: IMacro) {
+  async handleMacroCreate(client: Socket, payload: IMacro) {
     const macro = new Macro();
     macro.name = payload.name;
     macro.description = payload.description;
     macro.steps = payload.steps;
     macro.device = payload.device;
 
-    return this.macroService.createMacro(macro);
+    console.log(macro);
+
+    await this.macroService.createMacro(macro);
+    await this.handleMacroList(client, '');
   }
 
   @SubscribeMessage('macro:update')
@@ -76,28 +79,7 @@ export class MacrosGateway {
   @SubscribeMessage('macro:execute')
   async handleMacroExecute(client: Socket, payload: IMacro) {
     await Promise.all(payload.steps.map(async (step) => {
-      if (step.device === 'atem') {
-        // TODO: not sure that we need to execute this on all devices
-        
-        const devices = await this.devicesService.listDevices();
-        await Promise.all(devices.map(async (device) => {
-          await this.actionsService.execute(device.id, step.command, step.properties);
-        }))
-      } else if (step.device === 'camera') {
-        const payload = step.properties;
-
-        const panTiltCommand = new ViscaCommands.PanTiltDirectDriveCommand();
-        panTiltCommand.panSpeed = payload.panSpeed;
-        panTiltCommand.tiltSpeed = payload.tiltSpeed;
-        panTiltCommand.panPosition = payload.panPosition;
-        panTiltCommand.tiltPosition = payload.tiltPosition;
-        viscaDevice.sendCommand(panTiltCommand);
-
-
-        const zoomCommand = new ViscaCommands.ZoomDirectCommand();
-        zoomCommand.position = payload.position;
-        viscaDevice.sendCommand(zoomCommand);
-      }
+      await this.actionsService.execute(step.device || payload.device, step.command, step.properties);
     }));
   }
 }

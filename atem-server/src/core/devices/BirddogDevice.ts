@@ -12,7 +12,7 @@ interface IViscaDeviceMap {
 
 export class BirddogDevice extends Device {
   viscaDevice: ViscaDevice;
-  private state: IViscaDeviceMap = {};
+  private state: IViscaDeviceMap = { type: 'birddog' };
   private timeout?: NodeJS.Timeout;
 
   constructor(
@@ -47,6 +47,7 @@ export class BirddogDevice extends Device {
     ]);
 
     this.onStateChange({
+      type: 'birddog',
       pan: positionResponse?.pan,
       tilt: positionResponse?.tilt,
       zoom: zoomResponse,

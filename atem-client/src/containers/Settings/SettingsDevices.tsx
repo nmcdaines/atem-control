@@ -1,15 +1,13 @@
 import React from "react";
-import {useAtemState, useSocketState} from "core/SocketContext";
+import {useAtemState, useDevices, useSocketState} from "core/SocketContext";
 import { Grid, List, ListSubheader, Button, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Paper } from "@material-ui/core";
 import AddIcon from '@material-ui/icons/Add';
 
 import DeviceCard from "components/DeviceCard";
 
 function SettingsDevices() {
-  const atemState = useAtemState();
+  const atemState = useDevices();
   const devices = Object.keys(atemState);
-
-
 
   console.log(devices);
 
@@ -18,14 +16,12 @@ function SettingsDevices() {
       <Grid container spacing={2}>
         <Grid item md={8}>
           { devices.map((deviceId: string) => {
-            const { info, inputs, video } = atemState[deviceId] || {};
-
-            console.log(atemState[deviceId]);
 
             return (
-              <div key={`device-card-${deviceId}`}>
+              <div key={`device-card-${deviceId}`} style={{ marginBottom: 20, }}>
                  <DeviceCard
-                    productIdentifier={info.productIdentifier}
+                    productIdentifier={deviceId}
+                    device={atemState[deviceId]}
                  />
               </div>
             );
@@ -40,7 +36,7 @@ function SettingsDevices() {
 
 
         </Grid>
-        <Grid item md={4}>
+        {/* <Grid item md={4}>
           <Paper>
             <List
               subheader={
@@ -49,7 +45,7 @@ function SettingsDevices() {
                   <Button>Update</Button>
                 </ListSubheader>
               }
-            >
+            > */}
               {/*{discovery.map((device: any) => {*/}
 
               {/*  return (*/}
@@ -66,9 +62,9 @@ function SettingsDevices() {
               {/*    </ListItem>*/}
               {/*  )*/}
               {/*})}*/}
-            </List>
+            {/* </List>
           </Paper>
-        </Grid>
+        </Grid> */}
       </Grid>
     </div>
   );

@@ -36,12 +36,14 @@ export class DevicesGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   async handleDeviceUpdate(client: Socket, payload: any) {
     const { id, ...changes } = payload;
     const existingDevice = this.devicesService.getDevice(id);
-    this.devicesService.updateDevice(id, changes);
+    await this.devicesService.updateDevice(id, changes);
+    this.handleDevicesList(client, {});
   }
 
   @SubscribeMessage('device:delete')
   async handleDeviceDelete(client: Socket, payload: any) {
-    this.devicesService.deleteDevice(payload.id);
+    await this.devicesService.deleteDevice(payload.id);
+    this.handleDevicesList(client, {});
   }
 
   @SubscribeMessage('device:list')
@@ -62,7 +64,7 @@ export class DevicesGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       deviceStates[key] = connections.get(key).getState();
     }
 
-    client.emit('state:initial', deviceStates);
+    client.emit('response:device:state:initial', deviceStates);
   }
   
   afterInit(server: Server) {

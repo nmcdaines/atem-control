@@ -5,7 +5,9 @@ import {IAction} from "./actions";
 const SocketStateContext = React.createContext<any>(undefined);
 const SocketDispatchContext = React.createContext<any>(undefined);
 const AtemStateContext = React.createContext<any>({});
+const DevicesContext = React.createContext<any>({});
 const SocketContext = React.createContext<SocketIOClient.Socket | undefined>(undefined);
+const MacrosContext = React.createContext<any>({});
 
 const ENDPOINT = `ws://${window.location.hostname}:3000`;
 
@@ -33,7 +35,9 @@ function executeAction(action: IAction<any>) {
 
 function SocketProvider({ children }: any) {
   const [devices, setDevices] = useState<Record<string, any>>({});
+  const [deviceStates, setDeviceStates] = useState<Record<string, any>>({});
   const [state, dispatch] = React.useReducer<any>(reducerFn, initialState);
+  const [macros,setMacros] = useState<Record<string, any>>({});
 
   useEffect(() => {
     socket = io(ENDPOINT);
@@ -42,21 +46,48 @@ function SocketProvider({ children }: any) {
       console.log('socket -> connected');
 
       // SOCKET INITIALISED
+      socket.emit('device:list');
       socket.emit('device:state:initial');
+      socket.emit('macro:list');
     });
 
-    socket.on('state:initial', (payload: any) => {
+    socket.on('response:device:state:initial', (payload: any) => {
       console.log('socket -> state:initial', payload)
-      setDevices(payload);
+      setDeviceStates(payload);
     });
 
     socket.on('state:change', (payload: any) => {
       console.log('socket -> state:change', payload);
 
-      setDevices({
-        ...devices,
+      setDeviceStates({
+        ...deviceStates,
         [payload.id]: payload.state,
       })
+    });
+
+    socket.on('response:device:list', (payload: any) => {
+      console.log('socket -> response:device:list', payload);
+      setDevices(
+        payload.reduce((acc: any, val: any) => {
+          return {
+            ...acc,
+            [val.id]: { ...val }
+          }
+        }, {})  
+      );      
+    });
+
+    socket.on('response:macro:list', (payload: any) => {
+      console.log('socket -> response:macro:list', payload);
+
+      setMacros(
+        payload.reduce((acc: any, val: any) => {
+          return {
+            ...acc,
+            [val.id]: { ...val }
+          }
+        }, {})  
+      );
     });
 
     return () => {
@@ -68,8 +99,12 @@ function SocketProvider({ children }: any) {
     <SocketContext.Provider value={socket}>
       <SocketStateContext.Provider value={state}>
         <SocketDispatchContext.Provider value={dispatch}>
-          <AtemStateContext.Provider value={devices}>
-            { children }
+          <AtemStateContext.Provider value={deviceStates}>
+            <DevicesContext.Provider value={devices}>
+              <MacrosContext.Provider value={macros}>
+                { children }
+              </MacrosContext.Provider>
+            </DevicesContext.Provider>
           </AtemStateContext.Provider>
         </SocketDispatchContext.Provider>
       </SocketStateContext.Provider>
@@ -98,4 +133,20 @@ function useAtemState() {
   return context;
 }
 
-export { SocketProvider, useSocket, useSocketState, useAtemState }
+function useDevices() {
+  const context = React.useContext(DevicesContext);
+  if (context === undefined) {
+    throw new Error('useDevices must be used within a SocketProvider');
+  }
+  return context;
+}
+
+function useMacros() {
+  const context = React.useContext(MacrosContext);
+  if (context === undefined) {
+    throw new Error('useMacros must be used within a SocketProvider');
+  }
+  return context;
+}
+
+export { SocketProvider, useSocket, useSocketState, useAtemState, useDevices, useMacros }
