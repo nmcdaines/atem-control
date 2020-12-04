@@ -30,9 +30,9 @@ export class DevicesService {
     let connection: Device;
 
     const hooks: IHooks = {
-      onConnected: this.onConnected,
-      onDisconnected: this.onDisconnected,
-      onChange: this.onStateChange,
+      onConnected: this.onConnected(id),
+      onDisconnected: this.onDisconnected(id),
+      onChange: this.onStateChange(id),
     }
 
     if (type == 'atem') {

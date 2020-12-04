@@ -57,18 +57,18 @@ export class BirddogDevice extends Device {
     return this.state;
   }
 
-  onConnected(): void {
+  onConnected = (): void => {
     this._status = 'connected';
     super.onConnected();
     this.getInitialState();
     this.timeout = setInterval(this.inquire, POLL_TIME);
   }
-  onDisconnected(): void {
+  onDisconnected = (): void => {
     this._status = 'disconnected';
     super.onDisconnected();
     clearInterval(this.timeout);
   }
-  onStateChange(state: IViscaDeviceMap): void {
+  onStateChange = (state: IViscaDeviceMap): void => {
     super.onStateChange(state);
   }
 

@@ -25,13 +25,18 @@ export class AtemDevice extends Device {
     disconnect(): Promise<void> {
       return this.atem.disconnect();
     }
-    onConnected(): void {
+
+    /* NOTE: an anonymous function is required in order to
+     * to bind onConnected, onDisconnected, and onStateChange
+     * to this class instance instead of the Atem class instance
+     */
+    onConnected = (): void => {
       super.onConnected();
     }
-    onDisconnected(): void {
+    onDisconnected = (): void => {
       super.onDisconnected();
     }
-    onStateChange(state: AtemState): void {
+    onStateChange = (state: AtemState): void => {
       super.onStateChange(state);
     }
   

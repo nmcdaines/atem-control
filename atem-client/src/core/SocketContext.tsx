@@ -42,7 +42,7 @@ function SocketProvider({ children }: any) {
       console.log('socket -> connected');
 
       // SOCKET INITIALISED
-      socket.emit('action:state:initial');
+      socket.emit('device:state:initial');
     });
 
     socket.on('state:initial', (payload: any) => {

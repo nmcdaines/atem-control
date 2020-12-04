@@ -39,7 +39,7 @@
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^6.5.4",
-    "sony-visca-connection": "git+https://github.com/nmcdaines/tv-automation-sony-visca-connection.git",
+    "sony-visca-connection": "git+https://github.com/nmcdaines/tv-automation-sony-visca-connection.git#dist-20201204",
     "typeorm": "^0.2.29"
   },
   "devDependencies": {
