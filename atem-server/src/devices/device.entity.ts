@@ -11,6 +11,6 @@ export class Device {
     @Column()
     name: string;
 
-    @Column()
-    type: 'atem' | 'birddog';
+    @Column({ nullable: true, type: "character varying" })
+    type: string;
 }

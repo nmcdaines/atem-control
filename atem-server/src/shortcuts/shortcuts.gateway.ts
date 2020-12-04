@@ -26,8 +26,8 @@ export class ShortcutsGateway {
     const shortcut = new Shortcut();
     shortcut.page = payload.page;
     shortcut.slot = payload.slot;
-    shortcut.value = payload.value;
     shortcut.command = payload.command;
+    shortcut.value = payload.value;
     
     this.shortcutsService.createShortcut(shortcut);
   }

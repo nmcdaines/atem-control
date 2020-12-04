@@ -21,7 +21,7 @@ export class DevicesService {
 
   private async destroyDevice(deviceId: string): Promise<void> {
     await this.deviceConnections.get(deviceId)?.destroy();
-    this.deviceRepository.delete(deviceId);
+    this.deviceConnections.delete(deviceId);
   }
 
   private async createConnection(device: DeviceEntity) {
@@ -43,6 +43,7 @@ export class DevicesService {
     if (!connection) { return; }
 
     await connection.connect();
+    
     return connection;
   }
 
@@ -64,10 +65,17 @@ export class DevicesService {
     //
     await Promise.all(
       remoteDevices.map(async (device) => {
+        console.log(remoteDevices);
+
+
         const existingConnection = this.deviceConnections.get(device.id);
+
+        console.log(existingConnection);
         const ipChanged = device.ipAddress != existingConnection?.ipAddress;
 
-        if (existingConnection.status === 'disconnected') {
+        console.log(existingConnection);
+
+        if (existingConnection && existingConnection.status === 'disconnected') {
           this.logger.log(`Attempting to reconnect to: ${device.id}, ${device.ipAddress}`);
           return existingConnection.connect();
         }
@@ -77,6 +85,8 @@ export class DevicesService {
 
         this.destroyDevice(device.id);
 
+        this.logger.log(device);
+        
         const connection = await this.createConnection(device);
         this.deviceConnections.set(device.id, connection); 
       })
@@ -107,6 +117,7 @@ export class DevicesService {
   }
 
   public updateDevice(id: string, changes: Partial<DeviceEntity>) {
+    console.error(this.updateDevice, id, changes);
     return this.deviceRepository.update(id, changes);
   }
 

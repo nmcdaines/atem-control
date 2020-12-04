@@ -5,7 +5,7 @@ export interface IHooks {
 }
 
 export abstract class Device {
-  status: 'connecting' | 'connected' | 'disconnected' | 'unknown' = 'disconnected';
+  public status: 'connecting' | 'connected' | 'disconnected' | 'unknown' = 'disconnected';
 
   constructor(
     public readonly id: string,
