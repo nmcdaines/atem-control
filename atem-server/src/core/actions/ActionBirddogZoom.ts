@@ -12,7 +12,7 @@ export class ActionAtemBirddogZoom implements IServerAction<IViscaSetZoomPropert
   properties: IViscaSetZoomProperties;
 
   constructor(props: IViscaSetZoomProperties) {
-    this.type = ActionType.SET_INPUT_NAME;
+    this.type = ActionType.VISCA_SET_ZOOM;
     this.properties = props;
   }
 

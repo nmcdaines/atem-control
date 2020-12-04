@@ -15,7 +15,7 @@ export class ActionAtemBirddogPanTilt implements IServerAction<IViscaSetPanTiltP
   properties: IViscaSetPanTiltProperties;
 
   constructor(props: IViscaSetPanTiltProperties) {
-    this.type = ActionType.SET_INPUT_NAME;
+    this.type = ActionType.VISCA_SET_PAN_TILT;
     this.properties = props;
   }
 

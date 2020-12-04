@@ -10,6 +10,9 @@ import { ActionAtemSetInputName } from './ActionAtemSetInputName';
 import { Device } from '../devices';
 import { ActionAtemTransitionCut } from "./ActionAtemTypescriptCut";
 
+import { ActionAtemBirddogPanTilt } from './ActionBirddogPanTilt';
+import { ActionAtemBirddogZoom } from './ActionBirddogZoom';
+
 // export enum ActionType {
   // SET_PROGRAM = "SET_PROGRAM",                  // me, input
   // SET_PREVIEW = "SET_PREVIEW",                  // me, input
@@ -44,6 +47,9 @@ export function objectToAction(type: string, properties: any): IServerAction<any
 
     [ActionType.RECALL_SHORTCUT]: ActionNoop,
     [ActionType.RECALL_MACRO]: ActionNoop,    
+
+    [ActionType.VISCA_SET_PAN_TILT]: ActionAtemBirddogPanTilt,
+    [ActionType.VISCA_SET_ZOOM]: ActionAtemBirddogZoom,
   }[type];
 
   return FoundAction

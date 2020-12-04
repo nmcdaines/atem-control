@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { Button, Container, TextField } from '@material-ui/core';
-
+import { useSocket, useDevices } from "core/SocketContext";
 import CameraControl from 'components/CameraControl';
-import { SocketProvider, useSocket } from "core/SocketContext";
+import CameraControlSimple from 'components/CameraControlSimple';
 
 function Camera() {
+  const socket = useSocket();
+  const devices = useDevices();
+
   const [pan, setPan] = useState<number>(0);
   const [tilt, setTilt] = useState<number>(0);
   const [zoom, setZoom] = useState<number>(0);
-
-  const socket = useSocket();
 
   function moveSlow() {
     socket?.emit('camera:pantilt', {
@@ -56,6 +57,23 @@ function Camera() {
   return (
     <div style={{ paddingTop: 20 }}>
       <Container>
+
+        { Object.keys(devices).map((deviceId) => {
+          if (devices[deviceId].type !== 'birddog') { return null; }
+
+          return (
+            <div key={`device-${deviceId}`}>
+              { deviceId }
+              <CameraControlSimple
+                deviceId={deviceId}
+                {...devices[deviceId]}
+              />
+            </div>
+          )
+        }) }
+
+
+        
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           {/* <CameraControl
             pan={pan}

@@ -18,5 +18,6 @@ export class Macro {
     @Column()
     device: string;
 
-    // type
+    @Column()
+    type: string;
 }
