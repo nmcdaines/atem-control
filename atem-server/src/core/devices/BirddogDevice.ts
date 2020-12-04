@@ -29,11 +29,11 @@ export class BirddogDevice extends Device {
   }
 
   connect(): void {
-    this.status = 'connecting';
+    this._status = 'connecting';
     this.viscaDevice.connect();
   }
   disconnect(): void {
-    this.status = 'disconnected';
+    this._status = 'disconnected';
     this.viscaDevice.disconnect();
   }
 
@@ -58,13 +58,13 @@ export class BirddogDevice extends Device {
   }
 
   onConnected(): void {
-    this.status = 'connected';
+    this._status = 'connected';
     super.onConnected();
     this.getInitialState();
     this.timeout = setInterval(this.inquire, POLL_TIME);
   }
   onDisconnected(): void {
-    this.status = 'disconnected';
+    this._status = 'disconnected';
     super.onDisconnected();
     clearInterval(this.timeout);
   }

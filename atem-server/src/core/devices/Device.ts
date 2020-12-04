@@ -5,25 +5,27 @@ export interface IHooks {
 }
 
 export abstract class Device {
-  public status: 'connecting' | 'connected' | 'disconnected' | 'unknown' = 'disconnected';
+  _status: 'connecting' | 'connected' | 'disconnected' | 'unknown';
 
   constructor(
     public readonly id: string,
     public readonly ipAddress: string,
     public hooks?: IHooks,
-  ) { }
+  ) {
+    this._status = 'disconnected';
+  }
 
   abstract connect(): Promise<void> | void;
   abstract disconnect(): Promise<void> | void;
 
   onConnected(): void {
-    this.status = 'connected';
+    this._status = 'connected';
     if (this.hooks?.onConnected) {
       this.hooks.onConnected(this);
     }
   };
   onDisconnected(): void {
-    this.status = 'disconnected';
+    this._status = 'disconnected';
     if (this.hooks?.onDisconnected) {
       this.hooks.onDisconnected(this);
     }
@@ -38,4 +40,8 @@ export abstract class Device {
 
   // abstract execute(action: IAction);
   abstract destroy(): Promise<void> | void;
+
+  public get status() {
+    return this._status;
+  }
 }

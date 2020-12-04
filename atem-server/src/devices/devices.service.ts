@@ -20,6 +20,7 @@ export class DevicesService {
   @WebSocketServer() server: Server;
 
   private async destroyDevice(deviceId: string): Promise<void> {
+    this.logger.log(`destroying device ${deviceId}`);
     await this.deviceConnections.get(deviceId)?.destroy();
     this.deviceConnections.delete(deviceId);
   }
@@ -55,7 +56,7 @@ export class DevicesService {
 
     // Remove devices that have been removed from db
     const removedDeviceIds = localDeviceIds.filter((deviceId) => !remoteDeviceIds.has(deviceId));
-    if (removedDeviceIds) {
+    if (removedDeviceIds.length > 0) {
       this.logger.log(`The following devices have been identified for removal ${JSON.stringify(removedDeviceIds)}`);
     }
     await Promise.all(
@@ -67,13 +68,8 @@ export class DevicesService {
       remoteDevices.map(async (device) => {
         console.log(remoteDevices);
 
-
         const existingConnection = this.deviceConnections.get(device.id);
-
-        console.log(existingConnection);
         const ipChanged = device.ipAddress != existingConnection?.ipAddress;
-
-        console.log(existingConnection);
 
         if (existingConnection && existingConnection.status === 'disconnected') {
           this.logger.log(`Attempting to reconnect to: ${device.id}, ${device.ipAddress}`);
@@ -83,9 +79,7 @@ export class DevicesService {
         // Device is fine, move on
         if (existingConnection && !ipChanged) { return; }
 
-        this.destroyDevice(device.id);
-
-        this.logger.log(device);
+        await this.destroyDevice(device.id);
         
         const connection = await this.createConnection(device);
         this.deviceConnections.set(device.id, connection); 

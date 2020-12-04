@@ -19,7 +19,7 @@ export class AtemDevice extends Device {
     }
   
     connect(): Promise<void> {
-      this.status = 'connecting';
+      this._status = 'connecting';
       return this.atem.connect(this.ipAddress);
     }
     disconnect(): Promise<void> {
@@ -39,8 +39,9 @@ export class AtemDevice extends Device {
       return this.atem?.state;
     }
 
-    destroy(): void | Promise<void> {
-        throw new Error("Method not implemented.");
+    async destroy(): Promise<void> {
+      this._status = 'disconnected';
+      await this.atem.destroy();
     }
 
     getAtem(): Atem {
