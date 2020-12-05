@@ -6,11 +6,14 @@ import {
   Typography,
   IconButton,
   Fab,
+  CardActions,
+  Button
 } from "@material-ui/core";
 import EditIcon from "@material-ui/icons/Edit";
 import AddIcon from "@material-ui/icons/Add";
 import { MacroForm } from "./MacroForm";
 import { useSocket, useMacros } from 'core/SocketContext';
+import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 
 interface IMacro {
   id: string;
@@ -27,6 +30,14 @@ interface IStep {
 
 
 function MacroViewItem({ macro }: any) {
+  const socket = useSocket();
+
+  const { steps = [] } = macro;
+
+  function run() {
+    socket?.emit('macro:execute:id', { id: macro.id })
+  }
+
   return (
     <Card style={{ marginBottom: 10 }}>
       <CardHeader
@@ -36,12 +47,31 @@ function MacroViewItem({ macro }: any) {
           </IconButton>
         }
         title={macro.name}
+        subheader={macro.type === 'camera' && 
+          <>
+            Pan: { (steps[0]?.properties?.pan || steps[1]?.properties?.pan) || 0 },
+            Tilt: { steps[0]?.properties?.tilt || steps[1]?.properties?.tilt || 0 },
+            Zoom: { ((10 / 16384) * (steps[0]?.properties?.zoom || steps[1]?.properties?.zoom || 0)).toFixed(1) }x
+          </>
+        }
       />
       <CardContent>
-        <Typography variant="body2" color="textSecondary" component="p">
-          {macro.description}
+        <Typography variant="body1" color="textSecondary" component="p">
+          { macro.description }
         </Typography>
       </CardContent>
+      {/* <Button
+          // onClick={run}
+        >
+          Delete
+        </Button>
+
+        <Button 
+          color="primary"
+          onClick={run}
+        >
+          Run <PlayArrowIcon />
+        </Button> */}
     </Card>
   );
 }

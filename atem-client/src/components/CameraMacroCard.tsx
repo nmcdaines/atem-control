@@ -25,7 +25,7 @@ export function CameraMacroCard({ id, device, name, description, steps }: any) {
           {/* {JSON.stringify(steps)} */}
           Pan: { (steps[0]?.properties?.pan || steps[1]?.properties?.pan) || 0 },
           Tilt: { steps[0]?.properties?.tilt || steps[1]?.properties?.tilt || 0 },
-          Zoom: { ((10 / 16384) * (steps[0]?.properties?.zoom || steps[1]?.properties?.zoom || 0)).toFixed(1) }x,
+          Zoom: { ((10 / 16384) * (steps[0]?.properties?.zoom || steps[1]?.properties?.zoom || 0)).toFixed(1) }x
         </Typography>
       </CardContent>
       <CardActions style={{ justifyContent: 'space-between' }}>
