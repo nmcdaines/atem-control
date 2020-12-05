@@ -28,6 +28,10 @@ export function ShortcutsDropZone(props: any) {
     socket?.emit('macro:execute:id', { id: props.shortcut.value })
   }
 
+  function onDelete() {
+    socket?.emit('shortcut:delete', { id: props.shortcut.id })
+  }
+
   if (!props.shortcut) {
     return (
       <div
@@ -60,11 +64,13 @@ export function ShortcutsDropZone(props: any) {
         </Typography>
       </CardContent>
       <CardActions style={{ justifyContent: 'space-between' }}>
-        <Button
-          // onClick={run}
-        >
-          Delete
-        </Button>
+        { props.edit &&
+          <Button
+            onClick={onDelete}
+          > 
+            Delete
+          </Button>
+        }
 
         <Button 
           color="primary"

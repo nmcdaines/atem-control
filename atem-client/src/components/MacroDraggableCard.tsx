@@ -21,9 +21,9 @@ export function MacroDraggableCard(props: any) {
           }
         />
         <CardContent>
-        <Typography variant="body1" color="textSecondary" component="p">
-          { props.macro?.description }
-        </Typography>
+          <Typography variant="body1" color="textSecondary" component="p">
+            { props.macro?.description }
+          </Typography>
         </CardContent>
       </Card>
     </div>

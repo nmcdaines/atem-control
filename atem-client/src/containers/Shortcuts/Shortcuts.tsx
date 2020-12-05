@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Container, Grid, Drawer, Card } from '@material-ui/core';
+import { Container, Grid, Drawer, Card, Button } from '@material-ui/core';
 import { Pagination } from '@material-ui/lab';
 import { useMacros, useShortcuts } from 'core/SocketContext';
 import { MacroDraggableCard } from 'components/MacroDraggableCard';
@@ -10,6 +10,7 @@ function Shortcuts() {
   const [page, setPage] = useState<number>(1);
   const macros = useMacros();
   const shortcuts = useShortcuts();
+  const [isEdit, setIsEdit] = useState(false);
 
   console.log('shortcuts', shortcuts)
 
@@ -28,11 +29,11 @@ function Shortcuts() {
 
   return (
     
-      <div>
+      <div style={{ marginTop: 60 }}>
         <Drawer
           anchor="right"
-          open={true}
-          variant="permanent"
+          open={isEdit}
+          variant="persistent"
         >
           <div style={{ width: 320, padding: 10 }}>
             <Grid container spacing={2}>
@@ -71,6 +72,7 @@ function Shortcuts() {
                     shortcut={getShortcut(page, value)}
                     page={page}
                     slot={value}
+                    edit={isEdit}
                   />
                 </Grid>
               )
@@ -78,13 +80,24 @@ function Shortcuts() {
 
           </Grid>
 
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
+            <div>
+              <Button
+                onClick={() => setIsEdit(!isEdit)}
+                variant="outlined"
+              >
+                { !isEdit ? 'Edit' : 'Run' }
+              </Button>
+            </div>
             <Pagination
               count={5}
               variant="outlined"
               page={page}
               onChange={(event: any, value: number) => { setPage(value) }}
             />
+            <div>
+              
+            </div>
           </div>
         </Container>
       </div>

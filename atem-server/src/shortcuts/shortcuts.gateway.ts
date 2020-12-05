@@ -22,8 +22,7 @@ export class ShortcutsGateway {
   private logger: Logger = new Logger('ShortcutsGateway')
 
   @SubscribeMessage('shortcut:create')
-  async handleShortcutCreate(client: Socket, payload: any) { 
-    console.log('shortcut:create', payload)
+  async handleShortcutCreate(client: Socket, payload: any) {
     const shortcut = new Shortcut();
     shortcut.page = payload.page;
     shortcut.slot = payload.slot;
@@ -51,7 +50,6 @@ export class ShortcutsGateway {
   @SubscribeMessage('shortcut:list')
   async handleShortcutList(client: Socket, payload: any) {
     const shortcuts = await this.shortcutsService.listShortcuts();
-    console.log(shortcuts);
     client.emit('response:shortcut:list', shortcuts);
   }
 }
