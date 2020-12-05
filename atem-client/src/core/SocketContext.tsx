@@ -8,6 +8,7 @@ const AtemStateContext = React.createContext<any>({});
 const DevicesContext = React.createContext<any>({});
 const SocketContext = React.createContext<SocketIOClient.Socket | undefined>(undefined);
 const MacrosContext = React.createContext<any>({});
+const ShortcutsContext = React.createContext<any>({});
 
 const ENDPOINT = `ws://${window.location.hostname}:3000`;
 
@@ -38,6 +39,7 @@ function SocketProvider({ children }: any) {
   const [deviceStates, setDeviceStates] = useState<Record<string, any>>({});
   const [state, dispatch] = React.useReducer<any>(reducerFn, initialState);
   const [macros,setMacros] = useState<Record<string, any>>({});
+  const [shortcuts,setShortcuts] = useState<Record<string, any>>({});
 
   useEffect(() => {
     socket = io(ENDPOINT);
@@ -49,6 +51,7 @@ function SocketProvider({ children }: any) {
       socket.emit('device:list');
       socket.emit('device:state:initial');
       socket.emit('macro:list');
+      socket.emit('shortcut:list');
     });
 
     socket.on('response:device:state:initial', (payload: any) => {
@@ -92,6 +95,19 @@ function SocketProvider({ children }: any) {
       );
     });
 
+    socket.on('response:shortcut:list', (payload: any) => {
+      console.log('socket -> response:shortcut:list', payload);
+
+      setShortcuts(
+        payload.reduce((acc: any, val: any) => {
+          return {
+            ...acc,
+            [val.id]: { ...val }
+          }
+        }, {})  
+      );
+    });
+
     return () => {
       socket.close();
     }
@@ -104,7 +120,9 @@ function SocketProvider({ children }: any) {
           <AtemStateContext.Provider value={deviceStates}>
             <DevicesContext.Provider value={devices}>
               <MacrosContext.Provider value={macros}>
-                { children }
+                <ShortcutsContext.Provider value={shortcuts}>
+                  { children }
+                </ShortcutsContext.Provider>
               </MacrosContext.Provider>
             </DevicesContext.Provider>
           </AtemStateContext.Provider>
@@ -151,4 +169,12 @@ function useMacros() {
   return context;
 }
 
-export { SocketProvider, useSocket, useSocketState, useAtemState, useDevices, useMacros }
+function useShortcuts() {
+  const context = React.useContext(ShortcutsContext);
+  if (context === undefined) {
+    throw new Error('useMacros must be used within a SocketProvider');
+  }
+  return context;
+}
+
+export { SocketProvider, useSocket, useSocketState, useAtemState, useDevices, useMacros, useShortcuts }

@@ -29,11 +29,11 @@ export function CameraMacroCard({ id, device, name, description, steps }: any) {
         </Typography>
       </CardContent>
       <CardActions style={{ justifyContent: 'space-between' }}>
-        <Button
+        {/* <Button
           // onClick={run}
         >
           Delete
-        </Button>
+        </Button> */}
 
         <Button 
           color="primary"
@@ -42,12 +42,6 @@ export function CameraMacroCard({ id, device, name, description, steps }: any) {
           Run <PlayArrowIcon />
         </Button>
       </CardActions>
-
-      {/* {JSON.stringify(macro)} */}
-
-      {/* <Typography className={classes.title} color="textSecondary" gutterBottom>
-          Word of the Day
-        </Typography> */}
     </Card>
   )
 }

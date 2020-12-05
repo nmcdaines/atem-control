@@ -15,6 +15,8 @@ import SettingsContainer from "./containers/Settings";
 import ShortcutsContainer from "./containers/Shortcuts";
 import LivestreamContainer from "./containers/Livestream";
 import CameraContainer from "./containers/Camera";
+import { DndProvider } from 'react-dnd'
+import { HTML5Backend } from 'react-dnd-html5-backend'
 
 import { SocketProvider, useSocket } from "./core/SocketContext";
 
@@ -28,66 +30,68 @@ function App() {
   const socket = useSocket();
 
   return (
-    <div className="App">
-      <Router>
-        <AppBar />
+    <DndProvider backend={HTML5Backend}>
+      <div className="App">
+        <Router>
+          <AppBar />
 
-        <Switch>
-          <Route path="/shortcuts" component={ShortcutsContainer} />
-          <Route path="/surface" component={SurfaceContainer} />
-          <Route path="/settings" component={SettingsContainer} />
-          <Route path="/livestream" component={LivestreamContainer} />
-          <Route path="/camera" component={CameraContainer} />
-        </Switch>
-      </Router>
-
-
-      <div>
+          <Switch>
+            <Route path="/shortcuts" component={ShortcutsContainer} />
+            <Route path="/surface" component={SurfaceContainer} />
+            <Route path="/settings" component={SettingsContainer} />
+            <Route path="/livestream" component={LivestreamContainer} />
+            <Route path="/camera" component={CameraContainer} />
+          </Switch>
+        </Router>
 
 
-        {/* <Container style={{ marginTop: 20 }}>
-          <Paper>
-            <Box p={2}>
+        <div>
 
-              <Box>
-                <TextField
-                  variant="outlined"
-                  fullWidth
-                  value={messageType}
-                  onChange={(e) => setMessageType(e.target.value)}
-                  placeholder="Message Type"
-                  label="Type"
-                />
+
+          {/* <Container style={{ marginTop: 20 }}>
+            <Paper>
+              <Box p={2}>
+
+                <Box>
+                  <TextField
+                    variant="outlined"
+                    fullWidth
+                    value={messageType}
+                    onChange={(e) => setMessageType(e.target.value)}
+                    placeholder="Message Type"
+                    label="Type"
+                  />
+                </Box>
+                <Box mt={2}>
+                  <TextField
+                    variant="outlined"
+                    fullWidth
+                    multiline
+                    value={messageBody}
+                    onChange={(e) => setMessageBody(e.target.value)}
+                    placeholder="Body"
+                    label="Body"
+                  />
+                </Box>
+                <Box mt={2}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => {
+                      console.log('connect message');
+                      socket?.emit(messageType, JSON.parse(messageBody));
+                    }}
+                  >
+                    Send
+                  </Button>
+                </Box>
               </Box>
-              <Box mt={2}>
-                <TextField
-                  variant="outlined"
-                  fullWidth
-                  multiline
-                  value={messageBody}
-                  onChange={(e) => setMessageBody(e.target.value)}
-                  placeholder="Body"
-                  label="Body"
-                />
-              </Box>
-              <Box mt={2}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => {
-                    console.log('connect message');
-                    socket?.emit(messageType, JSON.parse(messageBody));
-                  }}
-                >
-                  Send
-                </Button>
-              </Box>
-            </Box>
-          </Paper>
-        </Container> */}
+            </Paper>
+          </Container> */}
 
+        </div>
       </div>
-    </div>
+    </DndProvider>
   );
 }
 

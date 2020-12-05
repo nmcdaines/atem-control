@@ -23,31 +23,35 @@ export class ShortcutsGateway {
 
   @SubscribeMessage('shortcut:create')
   async handleShortcutCreate(client: Socket, payload: any) { 
+    console.log('shortcut:create', payload)
     const shortcut = new Shortcut();
     shortcut.page = payload.page;
     shortcut.slot = payload.slot;
     shortcut.command = payload.command;
     shortcut.value = payload.value;
     
-    this.shortcutsService.createShortcut(shortcut);
+    await this.shortcutsService.createShortcut(shortcut);
+    await this.handleShortcutList(client, '');
   }
 
   @SubscribeMessage('shortcut:update')
   async handleShortcutUpdate(client: Socket, payload: any) {
     const { id, ...changes } = payload;
     const existingShortcut = this.shortcutsService.getShortcut(id);
-    this.shortcutsService.updateShortcut(id, changes);
+    await this.shortcutsService.updateShortcut(id, changes);
+    await this.handleShortcutList(client, '');
   }
 
   @SubscribeMessage('shortcut:delete')
   async handleShortcutDelete(client: Socket, payload: any) {
-    this.shortcutsService.deleteShortcut(payload.id);
+    await this.shortcutsService.deleteShortcut(payload.id);
+    await this.handleShortcutList(client, '');
   }
 
   @SubscribeMessage('shortcut:list')
   async handleShortcutList(client: Socket, payload: any) {
     const shortcuts = await this.shortcutsService.listShortcuts();
+    console.log(shortcuts);
     client.emit('response:shortcut:list', shortcuts);
   }
-
 }
