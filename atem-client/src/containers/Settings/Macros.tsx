@@ -60,18 +60,18 @@ function MacroViewItem({ macro, onEdit }: any) {
           { macro.description }
         </Typography>
       </CardContent>
-      {/* <Button
+        {/* <Button
           // onClick={run}
         >
           Delete
-        </Button>
+        </Button> */}
 
         <Button 
           color="primary"
           onClick={run}
         >
           Run <PlayArrowIcon />
-        </Button> */}
+        </Button>
     </Card>
   );
 }

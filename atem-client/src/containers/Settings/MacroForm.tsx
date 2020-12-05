@@ -194,8 +194,6 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                 </Box>
                                 <div>Properties</div>
 
-                                { JSON.stringify(step) }
-
                                 {( step.command === 'VISCA_SET_PAN_TILT') &&
                                   <Box mt={1}>
                                     <TextField
@@ -349,7 +347,7 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                         variant="outlined"
                                         label="Size X"
                                         margin="dense"
-                                        name={`steps.${index}.sizeX`}
+                                        name={`steps.${index}.properties.sizeX`}
                                         onBlur={handleBlur}
                                         onChange={handleChange}
                                         value={step.properties?.sizeX || ''}
@@ -362,7 +360,7 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                         variant="outlined"
                                         label="Size Y"
                                         margin="dense"
-                                        name={`steps.${index}.sizeY`}
+                                        name={`steps.${index}.properties.sizeY`}
                                         onBlur={handleBlur}
                                         onChange={handleChange}
                                         value={step.properties?.sizeY || ''}
@@ -375,7 +373,7 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                         variant="outlined"
                                         label="Source"
                                         margin="dense"
-                                        name={`steps.${index}.source`}
+                                        name={`steps.${index}.properties.source`}
                                         onBlur={handleBlur}
                                         onChange={handleChange}
                                         value={step.properties?.source || ''}
