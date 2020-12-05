@@ -29,7 +29,7 @@ interface IStep {
 }
 
 
-function MacroViewItem({ macro }: any) {
+function MacroViewItem({ macro, onEdit }: any) {
   const socket = useSocket();
 
   const { steps = [] } = macro;
@@ -43,7 +43,7 @@ function MacroViewItem({ macro }: any) {
       <CardHeader
         action={
           <IconButton>
-            <EditIcon />
+            <EditIcon onClick={onEdit}/>
           </IconButton>
         }
         title={macro.name}
@@ -78,11 +78,18 @@ function MacroViewItem({ macro }: any) {
 
 export default function Macros() {
   const [isOpen, setIsOpen] = useState(false);
-  const [initialState, setInitialState] = useState({});
+  const [initialState, setInitialState] = useState<any>({});
+  const [mode, setMode] = useState('create');
   const socket = useSocket();
   const macros = useMacros();
   
   function createMacro(macro: any) {
+    if (mode === 'edit') {
+      socket?.emit('macro:update', macro);
+      setIsOpen(false);
+      return;
+    } 
+
     socket?.emit('macro:create', macro);
     setIsOpen(false);
   }
@@ -96,6 +103,14 @@ export default function Macros() {
           <MacroViewItem
             key={`macro-${macroId}`}
             macro={macros[macroId]}
+            onEdit={() => {
+              setMode('edit');
+              setInitialState({
+                ...macros[macroId],
+              });
+              setIsOpen(true);
+            }}
+            mode={mode}
           />
         );
       })}
@@ -104,11 +119,12 @@ export default function Macros() {
         color="primary"
         style={{ position: 'fixed', right: 16, bottom: 16 }}
         onClick={() => {
+          setMode('create');
           setInitialState({
             name: '',
             description: '',
             steps: [{ delay: 0, command: 'SET_PREVIEW' }],
-          })
+          });
           setIsOpen(true);
         }}
       >
@@ -120,6 +136,7 @@ export default function Macros() {
         initialValues={initialState}
         onSubmit={createMacro}
         onCancel={() => setIsOpen(false)}
+        mode={mode}
       />
     </div>
   );

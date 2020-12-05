@@ -52,16 +52,18 @@ function SocketProvider({ children }: any) {
     });
 
     socket.on('response:device:state:initial', (payload: any) => {
-      console.log('socket -> state:initial', payload)
-      setDeviceStates(payload);
+      console.log('socket -> response:device:state:initial', payload)
+      setDeviceStates({ ...payload });
     });
 
     socket.on('state:change', (payload: any) => {
       console.log('socket -> state:change', payload);
 
+      console.log('the devices', deviceStates);
+
       setDeviceStates({
         ...deviceStates,
-        [payload.id]: payload.state,
+        [payload.id]: payload.state ,
       })
     });
 

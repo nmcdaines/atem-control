@@ -52,7 +52,7 @@ function Surface() {
       { devices.map((deviceId: string) => {
 
         if (atemState[deviceId]?.type === 'birddog') {
-          return <div key={`surface-${deviceId}`}></div>
+          return <div></div>
         }
 
         const { inputs, video } = atemState[deviceId] || {};

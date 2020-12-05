@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import AppBar from './components/AppBar';
 import { TextField, Button, Box, Container, Paper } from "@material-ui/core";
 import io from 'socket.io-client';
@@ -29,62 +29,62 @@ function App() {
 
   return (
     <div className="App">
-        <Router>
-          <AppBar />
+      <Router>
+        <AppBar />
 
-          <Switch>
-            <Route path="/shortcuts" component={ShortcutsContainer} />
-            <Route path="/surface" component={SurfaceContainer} />
-            <Route path="/settings" component={SettingsContainer} />
-            <Route path="/livestream" component={LivestreamContainer} />
-            <Route path="/camera" component={CameraContainer} />
-          </Switch>
-        </Router>
+        <Switch>
+          <Route path="/shortcuts" component={ShortcutsContainer} />
+          <Route path="/surface" component={SurfaceContainer} />
+          <Route path="/settings" component={SettingsContainer} />
+          <Route path="/livestream" component={LivestreamContainer} />
+          <Route path="/camera" component={CameraContainer} />
+        </Switch>
+      </Router>
 
 
       <div>
 
 
-        <Container style={{ marginTop: 20 }}>
+        {/* <Container style={{ marginTop: 20 }}>
           <Paper>
             <Box p={2}>
 
-      <Box>
-            <TextField
-        variant="outlined"
-        fullWidth
-        value={messageType}
-        onChange={(e) => setMessageType(e.target.value)}
-        placeholder="Message Type"
-        label="Type"
-      />
-      </Box>
-      <Box mt={2}>
-        <TextField
-        variant="outlined"
-        fullWidth
-        multiline
-        value={messageBody}
-        onChange={(e) => setMessageBody(e.target.value)}
-        placeholder="Body"
-        label="Body"
-      />
-      </Box>
+              <Box>
+                <TextField
+                  variant="outlined"
+                  fullWidth
+                  value={messageType}
+                  onChange={(e) => setMessageType(e.target.value)}
+                  placeholder="Message Type"
+                  label="Type"
+                />
+              </Box>
+              <Box mt={2}>
+                <TextField
+                  variant="outlined"
+                  fullWidth
+                  multiline
+                  value={messageBody}
+                  onChange={(e) => setMessageBody(e.target.value)}
+                  placeholder="Body"
+                  label="Body"
+                />
+              </Box>
               <Box mt={2}>
                 <Button
-          variant="contained"
-          color="primary"
-          onClick={() => {
-            console.log('connect message');
-            socket?.emit(messageType, JSON.parse(messageBody));
-          }}
-        >
-            Send
-        </Button>
+                  variant="contained"
+                  color="primary"
+                  onClick={() => {
+                    console.log('connect message');
+                    socket?.emit(messageType, JSON.parse(messageBody));
+                  }}
+                >
+                  Send
+                </Button>
               </Box>
             </Box>
           </Paper>
-        </Container>
+        </Container> */}
 
       </div>
     </div>

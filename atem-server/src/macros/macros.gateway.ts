@@ -50,14 +50,12 @@ export class MacrosGateway {
     macro.device = payload.device;
     macro.type = payload.type;
 
-    console.log(macro);
-
     await this.macroService.createMacro(macro);
     await this.handleMacroList(client, '');
   }
 
   @SubscribeMessage('macro:update')
-  handleMacroUpdate(client: Socket, payload: IMacro) {
+  async handleMacroUpdate(client: Socket, payload: IMacro) {
     const macro = new Macro();
     macro.name = payload.name;
     macro.description = payload.description;
@@ -65,7 +63,8 @@ export class MacrosGateway {
     macro.device = payload.device;
     macro.type = payload.type;
 
-    return this.macroService.updateMacro(payload.id, macro);
+    await this.macroService.updateMacro(payload.id, macro);
+    await this.handleMacroList(client, '');
   }
 
   @SubscribeMessage('macro:delete')

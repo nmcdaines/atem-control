@@ -33,9 +33,9 @@ function CameraControlSimple({ deviceId, state }: ICameraControlSimple) {
       id: deviceId,
       type: 'VISCA_SET_PAN_TILT',
       properties: {
-        pan: (state.pan || 0) + pan,
+        pan: (state?.pan || 0) + pan,
         panSpeed: panSpeed || 0,
-        tilt: (state.tilt || 0) + tilt,
+        tilt: (state?.tilt || 0) + tilt,
         tiltSpeed: tiltSpeed || 0,
       }
     })

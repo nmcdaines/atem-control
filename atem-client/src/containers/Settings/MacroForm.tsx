@@ -38,6 +38,7 @@ interface IMacroFormProps {
   initialValues: any,
   onSubmit: any;
   onCancel: any;
+  mode?: any;
 }
 
 export const MacroForm: React.FC<IMacroFormProps> = (props) => {
@@ -54,7 +55,7 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
       maxWidth="sm"
     >
       <DialogTitle>
-        Create / Edit Macro
+        {props.mode === 'edit' ? 'Edit' : 'Create'} Macro
         </DialogTitle>
 
 
@@ -71,9 +72,6 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
           handleSubmit,
           isSubmitting,
         }) => {
-
-          console.log(values);
-
           const steps = values.steps || [];
 
           return (
@@ -189,12 +187,97 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                       <MenuItem value="SET_PIP">Set Picture In Picture</MenuItem>
                                       <MenuItem value="TRANSITION_AUTO">Transition AUTO</MenuItem>
                                       <MenuItem value="TRANSITION_CUT">Transition CUT</MenuItem>
+                                      <MenuItem value="VISCA_SET_PAN_TILT">Visca Set Pan Tilt</MenuItem>
+                                      <MenuItem value="VISCA_SET_ZOOM">Visca Set Zoom</MenuItem>
                                     </Select>
                                   </FormControl>
                                 </Box>
-                                  Properties
+                                <div>Properties</div>
 
-                                  {step.command != 'SET_PIP' &&
+                                { JSON.stringify(step) }
+
+                                {( step.command === 'VISCA_SET_PAN_TILT') &&
+                                  <Box mt={1}>
+                                    <TextField
+                                      fullWidth
+                                      variant="outlined"
+                                      label="Pan"
+                                      margin="dense"
+                                      name={`steps.${index}.properties.pan`}
+                                      onBlur={handleBlur}
+                                      onChange={handleChange}
+                                      value={step.properties?.pan || 0}
+                                      required={(
+                                        step.command === 'VISCA_SET_PAN_TILT'
+                                      )}
+                                    />
+                                    <Box mt={1}>
+                                      <TextField
+                                        fullWidth
+                                        variant="outlined"
+                                        label="Pan Speed"
+                                        margin="dense"
+                                        name={`steps.${index}.properties.panSpeed`}
+                                        onBlur={handleBlur}
+                                        onChange={handleChange}
+                                        value={step.properties?.panSpeed || 0}
+                                        required={(
+                                          step.command === 'VISCA_SET_PAN_TILT'
+                                        )}
+                                      />
+                                    </Box>
+                                    <Box mt={1}>
+                                      <TextField
+                                        fullWidth
+                                        variant="outlined"
+                                        label="Tilt"
+                                        margin="dense"
+                                        name={`steps.${index}.properties.tilt`}
+                                        onBlur={handleBlur}
+                                        onChange={handleChange}
+                                        value={step.properties?.tilt || 0}
+                                        required={(
+                                          step.command === 'VISCA_SET_PAN_TILT'
+                                        )}
+                                      />
+                                    </Box>
+                                    <Box mt={1}>
+                                      <TextField
+                                        fullWidth
+                                        variant="outlined"
+                                        label="Tilt Speed"
+                                        margin="dense"
+                                        name={`steps.${index}.properties.tiltSpeed`}
+                                        onBlur={handleBlur}
+                                        onChange={handleChange}
+                                        value={step.properties?.tiltSpeed || 0}
+                                        required={(
+                                          step.command === 'VISCA_SET_PAN_TILT'
+                                        )}
+                                      />
+                                    </Box>
+                                  </Box>
+                                }
+
+                                {( step.command === 'VISCA_SET_ZOOM' ) &&
+                                  <Box mt={1}>
+                                    <TextField
+                                      fullWidth
+                                      variant="outlined"
+                                      label="Zoom"
+                                      margin="dense"
+                                      name={`steps.${index}.properties.zoom`}
+                                      onBlur={handleBlur}
+                                      onChange={handleChange}
+                                      value={step.properties?.zoom || 0}
+                                      required={(
+                                        step.command === 'VISCA_SET_ZOOM'
+                                      )}
+                                    />
+                                  </Box>
+                                }
+
+                                {(step.command != 'SET_PIP' && step.command != 'VISCA_SET_PAN_TILT' && step.command != 'VISCA_SET_ZOOM' ) &&
                                   <Box mt={1}>
                                     <TextField
                                       fullWidth
