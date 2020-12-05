@@ -76,7 +76,7 @@ function App() {
           color="primary"
           onClick={() => {
             console.log('connect message');
-            // socket.emit(messageType, JSON.parse(messageBody));
+            socket?.emit(messageType, JSON.parse(messageBody));
           }}
         >
             Send

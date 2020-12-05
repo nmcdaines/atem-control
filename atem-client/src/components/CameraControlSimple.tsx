@@ -15,15 +15,15 @@ interface ICameraControlSimple {
   pan?: number;
   tilt?: number;
   zoom?: number;
+  state: any;
 }
 
-function CameraControlSimple({ deviceId }: ICameraControlSimple) {
+function CameraControlSimple({ deviceId, state }: ICameraControlSimple) {
   const [moveIncrement, setMoveIncrement] = useState(10);
   const [zoomIncrement, setZoomIncrement] = useState(1638);
   const [speed, setSpeed] = useState(4);
 
   const socket = useSocket(); 
-  const state = useAtemState()[deviceId];
 
   const sendPanTitltCommand = ({ pan, tilt, panSpeed, tiltSpeed }: any) => {
 

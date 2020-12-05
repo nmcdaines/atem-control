@@ -25,6 +25,7 @@ interface IMacro {
   description?: string;
   steps: IStep[];
   device: string;
+  type: string;
 }
 
 const viscaDevice = new ViscaDevice('192.168.1.28');
@@ -47,6 +48,7 @@ export class MacrosGateway {
     macro.description = payload.description;
     macro.steps = payload.steps;
     macro.device = payload.device;
+    macro.type = payload.type;
 
     console.log(macro);
 
@@ -61,6 +63,7 @@ export class MacrosGateway {
     macro.description = payload.description;
     macro.steps = payload.steps;
     macro.device = payload.device;
+    macro.type = payload.type;
 
     return this.macroService.updateMacro(payload.id, macro);
   }
@@ -80,6 +83,21 @@ export class MacrosGateway {
   async handleMacroExecute(client: Socket, payload: IMacro) {
     await Promise.all(payload.steps.map(async (step) => {
       await this.actionsService.execute(step.device || payload.device, step.command, step.properties);
+    }));
+  }
+
+  @SubscribeMessage('macro:execute:id')
+  async handleMacroExecuteById(client: Socket, payload: any) {
+    console.log('execute', payload);
+
+    const macro = await this.macroService.getMacro(payload.id);
+
+    console.log('macro', macro);
+
+    if (!macro) { return; }
+
+    await Promise.all(macro.steps.map(async (step) => {
+      await this.actionsService.execute(step.device || macro.device, step.command, step.properties);
     }));
   }
 }

@@ -9,7 +9,7 @@ export class Macro {
     @Column()
     name: string;
 
-    @Column()
+    @Column({ nullable: true })
     description: string;
 
     @Column('jsonb')
@@ -18,6 +18,6 @@ export class Macro {
     @Column()
     device: string;
 
-    @Column()
+    @Column({ nullable: true })
     type: string;
 }

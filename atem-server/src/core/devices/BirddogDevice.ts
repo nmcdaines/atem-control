@@ -1,7 +1,7 @@
 import { ViscaDevice, InquiryCommands } from "sony-visca-connection";
 import { Device, IHooks } from './Device';
 
-const POLL_TIME = 200;
+const POLL_TIME = 300;
 
 interface IViscaDeviceMap {
   [key: string]: any;
@@ -46,6 +46,7 @@ export class BirddogDevice extends Device {
       this.viscaDevice.sendCommand(zoomInqquiry),
     ]);
 
+    console.log(positionResponse, zoomResponse)
 
     if (
       isNaN(positionResponse?.pan) ||
@@ -55,9 +56,6 @@ export class BirddogDevice extends Device {
     ) {
       return;
     }
-
-
-    console.log(positionResponse, zoomResponse);
 
     this.onStateChange({
       type: 'birddog',
