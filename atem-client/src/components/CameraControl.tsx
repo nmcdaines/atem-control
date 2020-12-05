@@ -33,7 +33,7 @@ function CameraControl({ pan, setPan, tilt, setTilt, zoom, setZoom }: any) {
 
     
     // What we care about it getting a "zoom increment"
-    const zoomIncrement = (100/16384) * zoom;
+    const zoomIncrement = (100/16384) * zoom;  
     console.log(zoomIncrement);
     const zoomPercentage = 100 - zoomIncrement;
     console.log(zoomPercentage);

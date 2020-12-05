@@ -46,6 +46,19 @@ export class BirddogDevice extends Device {
       this.viscaDevice.sendCommand(zoomInqquiry),
     ]);
 
+
+    if (
+      isNaN(positionResponse?.pan) ||
+      isNaN(positionResponse?.tilt) ||
+      isNaN(zoomResponse) ||
+      zoomResponse === 15
+    ) {
+      return;
+    }
+
+
+    console.log(positionResponse, zoomResponse);
+
     this.onStateChange({
       type: 'birddog',
       pan: positionResponse?.pan,

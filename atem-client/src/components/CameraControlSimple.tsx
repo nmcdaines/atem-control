@@ -1,79 +1,180 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { useSocket, useAtemState } from 'core/SocketContext';
 
-import { Button } from '@material-ui/core';
+import { Button, TextField } from '@material-ui/core';
+import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
+import ToggleButton from '@material-ui/lab/ToggleButton';
+import DirectionalButtons from './DirectionalButtons';
+import ZoomButtons from './ZoomButtons';
+
 
 interface ICameraControlSimple {
   deviceId: string;
+  name: string;
   pan?: number;
   tilt?: number;
   zoom?: number;
 }
 
-function CameraControlSimple({ deviceId, pan, tilt, zoom }: ICameraControlSimple) {
+function CameraControlSimple({ deviceId }: ICameraControlSimple) {
+  const [moveIncrement, setMoveIncrement] = useState(10);
+  const [zoomIncrement, setZoomIncrement] = useState(1638);
+  const [speed, setSpeed] = useState(4);
+
   const socket = useSocket(); 
   const state = useAtemState()[deviceId];
 
-  console.log(state);
+  const sendPanTitltCommand = ({ pan, tilt, panSpeed, tiltSpeed }: any) => {
 
-  function moveLeft() {
+    console.log('sendPanTitlt', pan, tilt);
+
     socket?.emit('action:execute', {
       id: deviceId,
       type: 'VISCA_SET_PAN_TILT',
       properties: {
-        pan: (state.pan || 0) - 10,
-        panSpeed: 24,
-        tilt: (state.tilt || 0),
-        tiltSpeed: 24,
+        pan: (state.pan || 0) + pan,
+        panSpeed: panSpeed || 0,
+        tilt: (state.tilt || 0) + tilt,
+        tiltSpeed: tiltSpeed || 0,
       }
     })
   }
 
-  function moveHome() {
-    socket?.emit('action:execute', {
-      id: deviceId,
-      type: 'VISCA_SET_PAN_TILT',
-      properties: {
-        pan: 0,
-        panSpeed: 24,
-        tilt: 0,
-        tiltSpeed: 24,
-      }
-    })
+
+  const onPan = (value: number) => () => {
+    sendPanTitltCommand({
+      pan: value,
+      panSpeed: speed,
+      tilt: 0,
+    });
   }
 
-  function moveRight() {
-    socket?.emit('action:execute', {
-      id: deviceId,
-      type: 'VISCA_SET_PAN_TILT',
-      properties: {
-        pan: (state.pan || 0) + 10,
-        panSpeed: 24,
-        tilt: (state.tilt || 0),
-        tiltSpeed: 24,
-      }
-    })
+  const onTitlt = (value: number) => () => {
+    sendPanTitltCommand({
+      pan: 0,
+      tilt: value,
+      tiltSpeed: speed,
+    });
   }
 
-  function handleZoom() {
+  const onZoom = (value: number) => () => {
     socket?.emit('action:execute', {
       id: deviceId,
       type: 'VISCA_SET_ZOOM',
       properties: {
         // max: 16384
-        zoom: 16934
+        zoom: (state.zoom || 0) + value
       }
     })
   }
 
+  const handleIncrementChange = (event: React.MouseEvent<HTMLElement>, newIncrement: number) => {
+    setMoveIncrement(newIncrement);
+  }
+
+  const handleZoomIncrement = (event: React.MouseEvent<HTMLElement>, newIncrement: number) => {
+    setZoomIncrement(newIncrement);
+  }
+
   return (
     <div>
-      <Button variant="outlined" onClick={moveLeft}>Left</Button>
-      <Button variant="outlined" onClick={moveHome}>Home</Button>
-      <Button variant="outlined" onClick={moveRight}>Right</Button>
+      <div style={{ display: 'flex', padding: '20px 0' }}>
+        <DirectionalButtons
+          onUp={onTitlt(moveIncrement)}
+          onDown={onTitlt(moveIncrement * -1)}
+          onLeft={onPan(moveIncrement * -1)}
+          onRight={onPan(moveIncrement)}
+        />
+        <div style={{ width: 80 }} />
+        <ZoomButtons
+          onT={onZoom(zoomIncrement)}
+          onW={onZoom(zoomIncrement * -1)}
+        />
+      </div>
+
+      <div style={{ display: 'flex', padding: '20px 0' }}>
+        <div>
+          <div>Pan/Tilt Increment</div>
+          <ToggleButtonGroup
+            value={moveIncrement}
+            exclusive
+            onChange={handleIncrementChange}
+          >
+            <ToggleButton value={2} aria-label="left aligned">
+              2
+            </ToggleButton>
+            <ToggleButton value={5} aria-label="left aligned">
+              5
+            </ToggleButton>
+            <ToggleButton value={10} aria-label="left aligned">
+              10
+            </ToggleButton>
+            <ToggleButton value={30} aria-label="centered">
+              30
+            </ToggleButton>
+            <ToggleButton value={50} aria-label="right aligned">
+              50
+            </ToggleButton>
+            <ToggleButton value={100} aria-label="right aligned">
+              100
+            </ToggleButton>
+            <ToggleButton value={250} aria-label="right aligned">
+              250
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </div>
+
+        <div style={{ width: 30 }} />
+
+        <div>
+          <div>Zoom Increment</div>
+          <ToggleButtonGroup
+            value={zoomIncrement}
+            exclusive
+            onChange={handleZoomIncrement}
+          >
+            <ToggleButton value={410} aria-label="right aligned">
+              0.25x
+            </ToggleButton>
+            <ToggleButton value={819} aria-label="right aligned">
+              0.5x
+            </ToggleButton>
+            <ToggleButton value={1638} aria-label="right aligned">
+              1x
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </div>
+      </div>
       
-      <Button variant="outlined" onClick={handleZoom}>Zoom</Button>
+      <div style={{ display: 'flex', padding: '20px 0' }}>
+        <div>
+          <TextField
+            variant="filled"
+            label="Pan"
+            disabled
+            value={state?.pan}
+            style={{ marginRight: 10 }}
+          />
+
+          <TextField
+            variant="filled"
+            label="Tilt"
+            disabled
+            value={state?.tilt}
+            style={{ marginRight: 10 }}
+          />
+
+          <TextField
+            variant="filled"
+            label="Zoom"
+            disabled
+            value={`${((10 / 16384) * state?.zoom).toFixed(1)}x`}
+            style={{ marginRight: 10 }}
+          />
+        </div>
+      </div>
+
     </div>
   )
 }
