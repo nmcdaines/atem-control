@@ -2,6 +2,7 @@ import React from "react";
 
 import {createStyles, makeStyles, Theme, AppBar, Toolbar, Typography, Button} from "@material-ui/core";
 import {Link} from "react-router-dom";
+import { useIsConnected } from 'core/SocketContext';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -12,7 +13,14 @@ const useStyles = makeStyles((theme: Theme) =>
     title: {
       flexGrow: 1,
     },
-    connection: {
+    connected: {
+      background: 'green',
+      borderRadius: '50%',
+      height: 10,
+      width: 10,
+      marginRight: 10,
+    },
+    disconnected: {
       background: 'red',
       borderRadius: '50%',
       height: 10,
@@ -38,6 +46,7 @@ const links = [
 
 export default function () {
   const classes = useStyles();
+  const isConnected = useIsConnected();
 
   return (
     <AppBar position="static" className={classes.root}>
@@ -61,8 +70,8 @@ export default function () {
 
         <div className={classes.actionArea}>
           <Button color="inherit">
-            <span className={classes.connection}/>
-            Connect
+            <span className={ isConnected ? classes.connected : classes.disconnected }/>
+            { isConnected ? 'Connected' : 'Disconnected' }
           </Button>
         </div>
 

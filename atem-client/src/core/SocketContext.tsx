@@ -9,6 +9,7 @@ const DevicesContext = React.createContext<any>({});
 const SocketContext = React.createContext<SocketIOClient.Socket | undefined>(undefined);
 const MacrosContext = React.createContext<any>({});
 const ShortcutsContext = React.createContext<any>({});
+const IsConnectedContext = React.createContext<Boolean>(false);
 
 const ENDPOINT = `ws://${window.location.hostname}:3000`;
 
@@ -35,6 +36,7 @@ function executeAction(action: IAction<any>) {
 }
 
 function SocketProvider({ children }: any) {
+  const [isConnected, setIsConnected] = useState<Boolean>(false);
   const [devices, setDevices] = useState<Record<string, any>>({});
   const [deviceStates, setDeviceStates] = useState<Record<string, any>>({});
   const [state, dispatch] = React.useReducer<any>(reducerFn, initialState);
@@ -45,6 +47,7 @@ function SocketProvider({ children }: any) {
     socket = io(ENDPOINT);
 
     socket.on('connect', () => {
+      setIsConnected(true);
       console.log('socket -> connected');
 
       // SOCKET INITIALISED
@@ -52,6 +55,10 @@ function SocketProvider({ children }: any) {
       socket.emit('device:state:initial');
       socket.emit('macro:list');
       socket.emit('shortcut:list');
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
     });
 
     socket.on('response:device:state:initial', (payload: any) => {
@@ -117,15 +124,17 @@ function SocketProvider({ children }: any) {
     <SocketContext.Provider value={socket}>
       <SocketStateContext.Provider value={state}>
         <SocketDispatchContext.Provider value={dispatch}>
-          <AtemStateContext.Provider value={deviceStates}>
-            <DevicesContext.Provider value={devices}>
-              <MacrosContext.Provider value={macros}>
-                <ShortcutsContext.Provider value={shortcuts}>
-                  { children }
-                </ShortcutsContext.Provider>
-              </MacrosContext.Provider>
-            </DevicesContext.Provider>
-          </AtemStateContext.Provider>
+          <IsConnectedContext.Provider value={isConnected}>
+            <AtemStateContext.Provider value={deviceStates}>
+              <DevicesContext.Provider value={devices}>
+                <MacrosContext.Provider value={macros}>
+                  <ShortcutsContext.Provider value={shortcuts}>
+                    { children }
+                  </ShortcutsContext.Provider>
+                </MacrosContext.Provider>
+              </DevicesContext.Provider>
+            </AtemStateContext.Provider>
+          </IsConnectedContext.Provider>
         </SocketDispatchContext.Provider>
       </SocketStateContext.Provider>
     </SocketContext.Provider>
@@ -172,9 +181,17 @@ function useMacros() {
 function useShortcuts() {
   const context = React.useContext(ShortcutsContext);
   if (context === undefined) {
-    throw new Error('useMacros must be used within a SocketProvider');
+    throw new Error('useShortcuts must be used within a SocketProvider');
   }
   return context;
 }
 
-export { SocketProvider, useSocket, useSocketState, useAtemState, useDevices, useMacros, useShortcuts }
+function useIsConnected() {
+  const context = React.useContext(IsConnectedContext);
+  if (context === undefined) {
+    throw new Error('useIsConnected must be used within a SocketProvider');
+  }
+  return context;
+}
+
+export { SocketProvider, useSocket, useSocketState, useAtemState, useDevices, useMacros, useShortcuts, useIsConnected }
