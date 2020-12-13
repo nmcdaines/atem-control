@@ -35,10 +35,26 @@ function executeAction(action: IAction<any>) {
   action.getMessage();
 }
 
+function deviceStateReducer(state: any, action: any = {}) {
+  switch (action.type) {
+    case 'all':
+      return { ...action.state }
+    case 'individual':
+      return (
+        {
+          ...state,
+          [action.id]: action.state
+        }
+    );
+    default:
+      return { ...state }
+  }
+}
+
 function SocketProvider({ children }: any) {
   const [isConnected, setIsConnected] = useState<Boolean>(false);
   const [devices, setDevices] = useState<Record<string, any>>({});
-  const [deviceStates, setDeviceStates] = useState<Record<string, any>>({});
+  const [deviceStates, dispatchDeviceState]: any = React.useReducer<any>(deviceStateReducer, {});
   const [state, dispatch] = React.useReducer<any>(reducerFn, initialState);
   const [macros,setMacros] = useState<Record<string, any>>({});
   const [shortcuts,setShortcuts] = useState<Record<string, any>>({});
@@ -63,18 +79,12 @@ function SocketProvider({ children }: any) {
 
     socket.on('response:device:state:initial', (payload: any) => {
       console.log('socket -> response:device:state:initial', payload)
-      setDeviceStates({ ...payload });
+      dispatchDeviceState({ type: 'all', state: { ...payload } });
     });
 
     socket.on('state:change', (payload: any) => {
-      console.log('socket -> state:change', payload);
-
-      console.log('the devices', deviceStates);
-
-      setDeviceStates({
-        ...deviceStates,
-        [payload.id]: payload.state ,
-      })
+      console.log('socket -> response:state:change', payload)
+      dispatchDeviceState({ type: 'individual', ...payload });
     });
 
     socket.on('response:device:list', (payload: any) => {

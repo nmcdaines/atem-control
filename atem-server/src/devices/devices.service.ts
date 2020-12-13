@@ -42,9 +42,7 @@ export class DevicesService {
     }
 
     if (!connection) { return; }
-
     await connection.connect();
-    
     return connection;
   }
 

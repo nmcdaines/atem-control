@@ -34,7 +34,9 @@ export abstract class Device {
   abstract getState(): any;
   onStateChange(state): any {
     if (this.hooks?.onChange) {
-      this.hooks.onChange(state, this);
+      this.hooks.onChange({
+        ...state
+      }, this);
     }
   };
 
