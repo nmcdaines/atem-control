@@ -298,16 +298,15 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                   <>
                                     <Box mt={1}>
                                       <FormControl {...defaultTextFieldProps}>
-                                        <InputLabel required>
+                                        <InputLabel>
                                           Command
-                                          </InputLabel>
+                                        </InputLabel>
                                         <Select
                                           label="Command"
                                           name={`steps.${index}.properties.direction`}
                                           onBlur={handleBlur}
                                           onChange={handleChange}
                                           value={step.properties?.direction || ''}
-                                          required
                                         >
                                           <MenuItem value="ON">On</MenuItem>
                                           <MenuItem value="OFF">Off</MenuItem>
@@ -325,7 +324,6 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                         onBlur={handleBlur}
                                         onChange={handleChange}
                                         value={step.properties?.positionX || ''}
-                                        required
                                       />
                                     </Box>
                                     <Box mt={1}>
@@ -338,7 +336,6 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                         onBlur={handleBlur}
                                         onChange={handleChange}
                                         value={step.properties?.positionY || ''}
-                                        required
                                       />
                                     </Box>
                                     <Box mt={1}>
@@ -351,7 +348,6 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                         onBlur={handleBlur}
                                         onChange={handleChange}
                                         value={step.properties?.sizeX || ''}
-                                        required
                                       />
                                     </Box>
                                     <Box mt={1}>
@@ -364,7 +360,6 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                         onBlur={handleBlur}
                                         onChange={handleChange}
                                         value={step.properties?.sizeY || ''}
-                                        required
                                       />
                                     </Box>
                                     <Box mt={1}>
@@ -377,9 +372,6 @@ export const MacroForm: React.FC<IMacroFormProps> = (props) => {
                                         onBlur={handleBlur}
                                         onChange={handleChange}
                                         value={step.properties?.source || ''}
-                                        required={(
-                                          step.command === 'SET_PIP'
-                                        )}
                                       />
                                     </Box>
                                   </>

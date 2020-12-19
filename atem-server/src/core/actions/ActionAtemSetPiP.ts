@@ -27,6 +27,7 @@ export class ActionAtemSetPiP implements IServerAction<ISetPiPProperties> {
   }
 
   async execute(device: AtemDevice) {
+    const currentState = device?.atem?.state;
     const { direction, source, ...boxDimensions } = this.properties;
 
     const tasks = [
@@ -34,19 +35,32 @@ export class ActionAtemSetPiP implements IServerAction<ISetPiPProperties> {
     ];
 
 
-    if (direction) {
+    if (`${direction}`.length > 0) {
       tasks.push(
         device?.atem?.setUpstreamKeyerOnAir(direction == 'ON')
       );
     }
 
-    await Promise.all(tasks);
-
-    if (source) {
-      device?.atem?.setUpstreamKeyerFillSource(source);
+    if (`${source}`.length > 0) {
+      tasks.push(
+        device?.atem?.setUpstreamKeyerFillSource(source)
+      );
     }
 
-    if (Object.keys(boxDimensions).length <= 0) return;
-    device?.atem?.setUpstreamKeyerDVESettings({ ...boxDimensions });
+    if (Object.keys(boxDimensions).length > 0) {
+      const { positionX, positionY, sizeX, sizeY }: any = boxDimensions;
+      if (`${positionX}`.length > 0 && `${positionY}`.length > 0 && `${sizeX}`.length > 0 && `${sizeY}`.length > 0) {
+        tasks.push(
+          device?.atem?.setUpstreamKeyerDVESettings({
+            sizeX: parseInt(sizeX),
+            sizeY: parseInt(sizeY),
+            positionX: parseInt(positionX),
+            positionY: parseInt(positionY),
+          })
+        );
+      }
+    };
+
+    await Promise.all(tasks);
   }
 }
