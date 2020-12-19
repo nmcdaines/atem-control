@@ -1,6 +1,6 @@
 import { SubscribeMessage, WebSocketGateway } from '@nestjs/websockets';
 import {Socket} from "socket.io";
-import {ActionType} from "atem-lib";
+import {ActionType} from "src/core/actions";
 import {objectToAction} from "../core/actions";
 import {ActionsService} from "./actions.service";
 

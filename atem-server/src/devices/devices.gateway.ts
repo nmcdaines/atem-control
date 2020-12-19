@@ -61,7 +61,7 @@ export class DevicesGateway implements OnGatewayInit, OnGatewayConnection, OnGat
 
     const connections = await this.devicesService.getConnections();
     for (let key of connections.keys()) {
-      deviceStates[key] = connections.get(key).getState();
+      deviceStates[key] = { ...connections.get(key).getState() };
     }
 
     client.emit('response:device:state:initial', deviceStates);

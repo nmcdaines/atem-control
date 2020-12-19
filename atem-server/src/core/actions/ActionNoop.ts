@@ -1,4 +1,4 @@
-import { ActionType } from 'atem-lib';
+import { ActionType } from 'src/core/actions';
 import { IServerAction } from "./index";
 import { Device } from '../devices';
 

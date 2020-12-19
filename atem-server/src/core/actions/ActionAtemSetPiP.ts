@@ -1,4 +1,4 @@
-import {ActionType} from 'atem-lib';
+import {ActionType} from 'src/core/actions';
 import {IServerAction} from "./index";
 import {MixEffectKeyType} from "atem-connection/dist/enums";
 import { AtemDevice } from '../devices';

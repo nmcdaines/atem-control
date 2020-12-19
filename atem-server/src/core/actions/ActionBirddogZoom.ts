@@ -1,4 +1,4 @@
-import { ActionType, IAction } from 'atem-lib';
+import { ActionType, IAction } from 'src/core/actions';
 import { IServerAction } from "./index";
 import { BirddogDevice } from '../devices';
 import { ViscaCommands } from 'sony-visca-connection';

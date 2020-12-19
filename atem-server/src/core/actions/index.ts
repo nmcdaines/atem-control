@@ -1,6 +1,3 @@
-import { ActionType, IAction } from "atem-lib";
-import { Atem } from "atem-connection";
-
 import { ActionNoop } from "./ActionNoop";
 import { ActionAtemSetPiP, EDirection } from "./ActionAtemSetPiP";
 import { ActionAtemSetPreview } from "./ActionAtemSetPreview";
@@ -13,19 +10,33 @@ import { ActionAtemTransitionCut } from "./ActionAtemTypescriptCut";
 import { ActionAtemBirddogPanTilt } from './ActionBirddogPanTilt';
 import { ActionAtemBirddogZoom } from './ActionBirddogZoom';
 
-// export enum ActionType {
-  // SET_PROGRAM = "SET_PROGRAM",                  // me, input
-  // SET_PREVIEW = "SET_PREVIEW",                  // me, input
-  // SET_PIP = "SET_PIP",                          // me, enabled, left, top, height, width
+enum ActionType {
+  SET_PROGRAM = "SET_PROGRAM",                  // me, input
+  SET_PREVIEW = "SET_PREVIEW",                  // me, input
+  TRANSITION_AUTO = "TRANSITION_AUTO",          // me, [optional] source
+  TRANSITION_CUT = "TRANSITION_CUT",            // me, [optional] source
+  SET_PIP = "SET_PIP",                          // me, enabled, left, top, height, width
 
-  // TRANSITION_AUTO = "TRANSITION_AUTO",          // me, [optional] source
-  // TRANSITION_CUT = "TRANSITION_CUT",            // me, [optional] source
+  RECALL_SHORTCUT = "RECALL_SHORTCUT",
+  RECALL_MACRO = "RECALL_MACRO",
 
-  // RECALL_SHORTCUTE = "RECALL_SHORTCUT",
-  // RECALL_MACRO = "RECALL_MACRO",
+  NOOP = "NOOP",
 
-  // NOOP = "NOOP",
-// }
+  SET_LIVESTREAM = "SET_LIVESTREAM",
+  LIVESTREAM_START = "LIVESTREAM_START",
+  LIVESTREAM_STOP = "LIVESTREAM_STOP",
+
+  SET_INPUT_NAME = "SET_INPUT_NAME",
+
+
+  VISCA_SET_PAN_TILT = "VISCA_SET_PAN_TILT",    // pan, tilt
+  VISCA_SET_ZOOM = "VISCA_SET_ZOOM",            // zoom
+}
+
+interface IAction<P> {
+  type: ActionType;
+  properties: P;
+}
 
 export interface IServerAction<P> extends IAction<P>{
   type: ActionType;
@@ -66,4 +77,7 @@ export {
   ActionAtemTransitionCut,
   ActionAtemSetInputName,
   EDirection,
+
+  ActionType,
+  IAction
 }

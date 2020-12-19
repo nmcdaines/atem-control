@@ -32,7 +32,6 @@
     "@network-utils/arp-lookup": "^1.3.4",
     "arpscan": "^1.0.2",
     "atem-connection": "^2.1.0",
-    "atem-lib": "file:../atem-lib",
     "mysql": "^2.18.1",
     "oui": "^11.0.38",
     "pg": "^8.4.1",
