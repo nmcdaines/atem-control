@@ -55,7 +55,7 @@ services:
     ports:
       - "8080:3000"
     volumes:
-      - '.:/app'
+      - './atem-client:/app'
       - '/app/node_modules'
 
 networks:
