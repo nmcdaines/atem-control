@@ -1,7 +1,7 @@
 version: "3"
 services:
   postgres:
-    container_name: postgres
+    container_name: db
     image: postgres:latest
     ports:
       - "5432:5432"
@@ -12,8 +12,8 @@ services:
 
   pgadmin:
     links:
-      - postgres:postgres
-    container_name: pgadmin
+      - postgres
+    container_name: postgresadmin
     image: dpage/pgadmin4
     ports:
       - "8081:80"
@@ -23,6 +23,8 @@ services:
       - docker.env
 
   backend:
+    links:
+      - postgres
     build: 
       context: ./atem-server
       dockerfile: Dockerfile
@@ -32,6 +34,8 @@ services:
       - "3000:3000"
       - 1935:1935
       - "443:443"
+      - 5678:5678
+      - 1259:1259
     volumes:
       - './atem-server:/app'
       - '/app/node_modules'
@@ -47,9 +51,9 @@ services:
       context: ./atem-client
       dockerfile: Dockerfile.prod
     expose:
-      - "80"
+      - "3000"
     ports:
-      - "8080:80"
+      - "8080:3000"
     volumes:
       - '.:/app'
       - '/app/node_modules'

@@ -23,7 +23,6 @@
     "@types/socket.io-client": "^1.4.34",
     "@types/styled-components": "^5.1.4",
     "add": "^2.0.6",
-    "atem-lib": "file:../atem-lib",
     "formik": "^2.2.5",
     "react": "^17.0.1",
     "react-beautiful-dnd": "^13.0.0",
