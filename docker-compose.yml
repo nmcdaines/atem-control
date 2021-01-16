@@ -1,33 +1,30 @@
-version: "3"
+version: '2'
 services:
   postgres:
-    container_name: db
-    image: postgres:latest
+    container_name: postgres
+    image: arm64v8/postgres
     ports:
       - "5432:5432"
-    volumes:
-      - ./data/postgres:/data/postgres
     env_file:
       - docker.env
+    volumes:
+      - 'db:/data/postgres'
 
-  pgadmin:
-    links:
-      - postgres
-    container_name: postgresadmin
-    image: dpage/pgadmin4
-    ports:
-      - "8081:80"
-    volumes:
-      - ./data/pgadmin:/root/.pgadmin
-    env_file:
-      - docker.env
+  # pgadmin:
+  #   # links:
+  #   #   - postgres
+  #   container_name: pgadmin
+  #   image: dpage/pgadmin4:latest
+  #   ports:
+  #     - "8081:80"
+  #   env_file:
+  #     - docker.env
 
   backend:
     links:
       - postgres
     build: 
       context: ./atem-server
-      dockerfile: Dockerfile
     expose:
       - "3000"
     ports:
@@ -36,28 +33,25 @@ services:
       - "443:443"
       - 5678:5678
       - 1259:1259
-    volumes:
-      - './atem-server:/app'
-      - '/app/node_modules'
     env_file:
       - docker.env
     depends_on:
       - postgres
-    links:
-      - 'postgres:database'
 
   frontend:
     build:
       context: ./atem-client
-      dockerfile: Dockerfile.prod
     expose:
       - "3000"
+      - "8080"
+      - "80"
     ports:
       - "8080:3000"
-    volumes:
-      - './atem-client:/app'
-      - '/app/node_modules'
+      - "80:80"
 
 networks:
   default:
     driver: bridge
+
+volumes:
+  db:

@@ -1,0 +1,15 @@
+# Build Environment
+FROM balenalib/%%BALENA_MACHINE_NAME%%-debian-node:12-stretch as build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --silent
+# Have a .dockerignore file ignoring node_modules and build
+COPY . ./
+RUN npm run build
+
+
+# Production
+FROM tobi312/rpi-nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+CMD ["nginx", "-g", "daemon off;"]

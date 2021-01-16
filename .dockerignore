@@ -3,3 +3,5 @@ dist
 .dockerignore
 Dockerfile
 Dockerfile.prod
+atem-client/node_modules
+atem-server/node_modules
