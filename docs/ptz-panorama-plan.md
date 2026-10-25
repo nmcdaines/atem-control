@@ -1,6 +1,17 @@
 # Plan: PTZ panorama map, live position overlay and soft limits
 
-Status: **draft for review**. Nothing here is implemented yet.
+Status: **implemented** and verified on a BirdDog P100 over a VPN, with the recommended answers to the open questions: limits keep the visible frame inside a rectangle, scans use the widest zoom, panoramas stay on each machine, and there is no on-air block yet.
+
+What changed from the draft once the hardware was measured:
+
+- The P100 never sends VISCA completion, so motion end comes from position polling (every 150 ms), which also drives the live map.
+- Stills use the low-bandwidth NDI stream (640×360): the full stream stalled over the VPN. Frames are taken once two consecutive frames match, not after a fixed delay.
+- Calibration measures zoomed-in levels at the most detailed spot in the wide view; plain walls cannot be measured. Result on the P100: 59.8° → 7.0° horizontal, 9.4× (10× nominal).
+- Scans discover the real limits from moves that stop short (this P100 tilts only about ±30°), skip unreachable grid points, crop to what was captured, and save the discovered range. 40 frames, about 2 minutes.
+- The P100 stops one unit short of targets, so restores aim past by the miss once; the camera returns to its exact start.
+- Lost inquiries are retried (Sony framing only), and jobs retry absolute moves, which are idempotent; manual moves are never retried.
+
+Remaining: per-tile brightness matching at seams, polygon limits, optional camera-side VISCA limits, and an on-air check.
 
 ## Goal
 

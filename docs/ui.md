@@ -17,7 +17,9 @@ The page count includes the highest imported/saved page. Large page ranges use e
 - Zoom uses a horizontal Wide → Tele slider.
 - Numeric pan/tilt targets and speed inputs remain available for precise values.
 
-The canvas plots a blue target frame and an emerald dashed readback frame when observed/simulated state is available. Pan and tilt move the center; increasing zoom shrinks the frame without moving its center. The map respects configured camera coordinate limits. Its zoom scale is schematic, not a calibrated optical field-of-view calculation.
+A calibrated camera replaces the canvas with a full-width camera map: its stored panorama, a green box for the current view (with the live NDI feed, gliding between position samples polled every 100 ms while moving), a dashed blue target box (red if it would break the soft limits) and the soft-limit rectangle, outside which the map is dimmed. Click or drag to aim, scroll or pinch to zoom; Set limits switches to drawing the allowed area. Calibrate and Scan panorama ask for confirmation because they move the camera.
+
+Uncalibrated cameras keep the schematic canvas: it plots a blue target frame and an emerald dashed readback frame when observed/simulated state is available. Pan and tilt move the center; increasing zoom shrinks the frame without moving its center. The map respects configured camera coordinate limits. Its zoom scale is schematic, not a calibrated optical field-of-view calculation.
 
 Click or drag the canvas to change X/Y. Arrow keys adjust the focused map; Shift increases the step. Slider thumbs are also keyboard accessible. These operations edit a local draft. Move to position applies X/Y, Set zoom applies zoom, and Use current as target copies readback into the draft. Saving a preset still uses the camera's observed position rather than an unapplied target.
 

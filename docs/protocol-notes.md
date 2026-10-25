@@ -26,6 +26,14 @@ If a camera ACKs a motion but never reports completion, the adapter waits 1 s, t
 
 The adapter has no background inquiries, speed joystick control or vendor image adjustments. Real-device tests must cover framing, coordinate limits, signed position representation, command completion, stop, loss of network, sequence reset and competing controllers.
 
+## BirdDog P100 (measured 2026-10-25, Sony UDP 52381)
+
+- Absolute pan/tilt (`81 01 06 02`) and zoom direct (`81 01 04 47`) are ACKed (`90 41 FF`) but **never send completion**. Movement end must be detected from position readback.
+- Pan/tilt and zoom inquiries answer within about 20 ms, **including while moving** (intermediate positions are reported).
+- Ranges (from the Bitfocus BirdDog Companion module, consistent with readback): pan ±0x08DA (±2266) = ±175°, tilt -394…+0x049D (1181) = -30°…+90°, about 12.95 pan and 13.1 tilt units per degree; zoom 0…0x4000, 10× optical.
+- A 100-unit pan at speed 8 took about 0.4 s (~250 units/s). Moves land within 0–1 unit of the commanded position, occasionally 1 unit off in tilt, so "settled" must allow a non-exact final position.
+- NDI: see below; the P100 ignores NDI absolute pan/tilt and sends no position metadata.
+
 ## NDI preview
 
 `control-runtime/src/ndi.rs` loads the NDI runtime when first needed instead of linking it, so builds need no NDI SDK and the app starts normally without NDI. It searches, in order: `NDI_LIBRARY` (an explicit library file), `NDI_RUNTIME_DIR_V6`/`NDI_RUNTIME_DIR_V5` (set by the NDI runtime installers), next to the executable and in the app bundle's `Frameworks`, then the SDK/system locations. No runtime is bundled yet; bundling requires following the NDI SDK licence and notice terms.

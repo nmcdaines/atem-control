@@ -57,7 +57,7 @@ The desktop host starts its own Rust core and stores its database in the platfor
 
 The hardware adapters have automated loopback coverage, **not physical camera/switcher acceptance**. Confirm the model, firmware, VISCA framing and coordinate ranges before using them in production. ATEM command success means transport acknowledgment, not completion of a physical transition. Timed waits do not establish physical settling. Camera positions are queried on request and after commands; continuous polling/joystick control is not yet implemented.
 
-An optional NDI® preview shows a camera's low-bandwidth stream in the PTZ framing canvas; see [NDI preview](docs/protocol-notes.md#ndi-preview). Image controls, NDI PTZ control, iOS, automatic device discovery, signing and release installers remain future work. A native macOS/Windows build matrix is configured in CI; those builds have not been run from this Linux environment.
+Cameras with VISCA readback and an NDI source can be calibrated and scanned into a panorama map with live position and soft limits; see [the panorama plan](docs/ptz-panorama-plan.md). An optional NDI® preview shows a camera's low-bandwidth stream in the PTZ framing canvas; see [NDI preview](docs/protocol-notes.md#ndi-preview). Image controls, NDI PTZ control, iOS, automatic device discovery, signing and release installers remain future work. A native macOS/Windows build matrix is configured in CI; those builds have not been run from this Linux environment.
 
 ## Development checks
 
