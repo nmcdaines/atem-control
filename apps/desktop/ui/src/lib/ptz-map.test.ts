@@ -5,7 +5,11 @@ import {
   focalAt,
   frameRect,
   layout,
+  limitsBounds,
   mapExtent,
+  padRect,
+  previewCells,
+  centreOffset,
   rangeFromCorners,
   viewUnits,
   withinLimits,
@@ -20,9 +24,9 @@ const p100: CameraCalibration = {
   frame_width: 640,
   frame_height: 360,
   focal: [
-    { zoom: 0, focal_px: 556.2 },
-    { zoom: 8192, focal_px: 1687.7 },
-    { zoom: 16384, focal_px: 5214.6 },
+    { zoom: 0, focal_px: 556.2, centre_x: 0, centre_y: 0 },
+    { zoom: 8192, focal_px: 1687.7, centre_x: 0, centre_y: 0 },
+    { zoom: 16384, focal_px: 5214.6, centre_x: 0, centre_y: 0 },
   ],
 };
 const range = { pan_min: -2216, pan_max: 2216, tilt_min: -394, tilt_max: 372 };
@@ -130,6 +134,80 @@ describe("calibrated PTZ map", () => {
     const held = clampToLimits(p100, limits, tele(800, 300));
     expect(withinLimits(p100, limits, held)).toBe(true);
     expect(held.pan).toBeLessThan(800);
+  });
+
+  it("frames the map on the soft limits with a margin", () => {
+    const whole = { left: -2600, right: 2600, top: 600, bottom: -1200 };
+    expect(limitsBounds(p100, {})).toBeNull();
+    const rect = limitsBounds(p100, {
+      rect: { pan_min: -500, pan_max: 500, tilt_min: -200, tilt_max: 100 },
+    })!;
+    expect(rect).toEqual({ left: -500, right: 500, top: 100, bottom: -200 });
+    expect(padRect(rect, 0.1, whole)).toEqual({
+      left: -600,
+      right: 600,
+      top: 130,
+      bottom: -230,
+    });
+    // A polygon frames on its bounding box; padding stays inside the room.
+    const point = (pan: number, tilt: number) => ({ pan, tilt });
+    const polygon = limitsBounds(p100, {
+      polygon: [point(2000, 0), point(2600, 500), point(2300, 600)],
+    })!;
+    expect(polygon).toEqual({ left: 2000, right: 2600, top: 600, bottom: 0 });
+    expect(padRect(polygon, 0.1, whole).right).toBe(2600);
+  });
+
+  it("shifts zoomed frames by the lens's measured centre drift", () => {
+    // At full zoom the picture centre lies 10 px right and 20 px down of
+    // the widest zoom's centre.
+    const drifting = {
+      ...p100,
+      focal: [
+        { zoom: 0, focal_px: 556.2, centre_x: 0, centre_y: 0 },
+        { zoom: 16384, focal_px: 5214.6, centre_x: 10, centre_y: 20 },
+      ],
+    };
+    const right = (Math.atan(10 / 556.2) * 180) / Math.PI;
+    const down = (Math.atan(20 / 556.2) * 180) / Math.PI;
+    expect(centreOffset(drifting, 0)).toEqual({ pan: 0, tilt: -0 });
+    const full = centreOffset(drifting, 16384);
+    expect(full.pan).toBeCloseTo(right * 12.95);
+    expect(full.tilt).toBeCloseTo(-down * 12.57);
+    // Halfway, the drift is interpolated.
+    expect(centreOffset(drifting, 8192).pan).toBeCloseTo((right * 12.95) / 2);
+    const frame = frameRect(drifting, { pan: 0, tilt: 0, zoom: 16384 });
+    expect((frame.left + frame.right) / 2).toBeCloseTo(full.pan);
+    expect((frame.top + frame.bottom) / 2).toBeCloseTo(full.tilt);
+    // The live picture is drawn over the same, shifted frame.
+    const cells = previewCells(
+      drifting,
+      { pan: 0, tilt: 0, zoom: 16384 },
+      480,
+      270,
+    );
+    expect(Math.min(...cells.map((c) => c.rect.left))).toBeCloseTo(
+      frame.left,
+      6,
+    );
+  });
+
+  it("places live image cells at the angles they show", () => {
+    const position = { pan: 100, tilt: -50, zoom: 0 };
+    const cells = previewCells(p100, position, 480, 270, 12, 8);
+    const frame = frameRect(p100, position);
+    // The cells exactly cover the frame the map draws.
+    const left = Math.min(...cells.map((c) => c.rect.left));
+    const right = Math.max(...cells.map((c) => c.rect.right));
+    const top = Math.max(...cells.map((c) => c.rect.top));
+    const bottom = Math.min(...cells.map((c) => c.rect.bottom));
+    expect(left).toBeCloseTo(frame.left, 6);
+    expect(right).toBeCloseTo(frame.right, 6);
+    expect(top).toBeCloseTo(frame.top, 6);
+    expect(bottom).toBeCloseTo(frame.bottom, 6);
+    // Edge columns cover fewer degrees than central ones (pinhole lens).
+    const width = (c: (typeof cells)[number]) => c.rect.right - c.rect.left;
+    expect(width(cells[0])).toBeLessThan(width(cells[5]) * 0.95);
   });
 
   it("builds a limit range from dragged corners in any direction", () => {

@@ -57,6 +57,7 @@ import type {
   Macro,
   NdiSnapshot,
   PanoramaInfo,
+  ScanDetail,
   Snapshot,
   Step,
 } from "./bindings";
@@ -262,31 +263,36 @@ export default function App() {
           </small>
         </div>
       </aside>
-      <main>
-        <header>
-          <div>
-            <div className="eyebrow">ATEM + PTZ</div>
-            <h1>{tab}</h1>
-            <p>
-              {
+      {/* The camera page drops the page header and width cap so the camera
+          view gets all the space available. */}
+      <main className={tab === "Cameras" ? "wide" : undefined}>
+        {tab !== "Cameras" && (
+          <header>
+            <div>
+              <div className="eyebrow">ATEM + PTZ</div>
+              <h1>{tab}</h1>
+              <p>
                 {
-                  Surface: "Your switcher, cameras and cues in one place.",
-                  Cameras: "Frame the next shot. Save it for later.",
-                  Macros: "Build repeatable sequences across your devices.",
-                  Shortcuts: "The right cue, one button away.",
-                  Devices: "Configure the devices in your production.",
-                  Workspace: "Back up, restore and migrate your configuration.",
-                }[tab]
-              }
-            </p>
-          </div>
-          <div className="header-meta">
-            <Badge className="chip" variant="outline">
-              DESKTOP PREVIEW
-            </Badge>
-            <span>{snapshot?.config.devices.length ?? 0} devices</span>
-          </div>
-        </header>
+                  {
+                    Surface: "Your switcher, cameras and cues in one place.",
+                    Cameras: "Frame the next shot. Save it for later.",
+                    Macros: "Build repeatable sequences across your devices.",
+                    Shortcuts: "The right cue, one button away.",
+                    Devices: "Configure the devices in your production.",
+                    Workspace:
+                      "Back up, restore and migrate your configuration.",
+                  }[tab]
+                }
+              </p>
+            </div>
+            <div className="header-meta">
+              <Badge className="chip" variant="outline">
+                DESKTOP PREVIEW
+              </Badge>
+              <span>{snapshot?.config.devices.length ?? 0} devices</span>
+            </div>
+          </header>
+        )}
         {error && (
           <Alert
             role="alert"
@@ -728,6 +734,23 @@ function Camera({
   const ndiStatus = ndi.previews.find((p) => p.device_id === device.id);
   const send = (command: Command) =>
     void task(() => api.execute(device.id, command));
+  // Applies the whole target: pan, tilt and zoom. Zooming in happens before
+  // the pan and zooming out after it, so the shot in between never shows
+  // more than the start or end shot (and so stays within soft limits).
+  const go = () =>
+    void task(async () => {
+      const panTilt: Command = {
+        type: "pan_tilt",
+        pan: target.pan,
+        tilt: target.tilt,
+        pan_speed: target.pan_speed,
+        tilt_speed: target.tilt_speed,
+      };
+      const zoom: Command = { type: "zoom", position: target.zoom };
+      const zoomingIn = target.zoom >= (current?.zoom ?? 0);
+      for (const command of zoomingIn ? [zoom, panTilt] : [panTilt, zoom])
+        await api.execute(device.id, command);
+    });
   const pl =
     device.connection.type === "visca" ? device.connection.pan_limit : 32767;
   const tl =
@@ -785,45 +808,32 @@ function Camera({
     });
   }
   return (
-    <Card className="panel gap-0 p-6">
-      <CardHeader className="panel-heading mb-6 flex flex-row items-center justify-between gap-4 p-0">
-        <div>
-          <span className="eyebrow">PTZ CONTROL</span>
-          <h2>{device.name}</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <TallyBadge tally={tally} />
-          <Status
-            state={state}
-            simulated={device.connection.type === "simulation"}
-          />
-        </div>
-      </CardHeader>
-      {state?.error && <Notice>{state.error}</Notice>}
-      {device.calibration && (
-        // A panorama is several times wider than tall, so the map gets the
-        // card's full width.
-        <div className="mb-6">
-          <PtzMap
-            calibration={device.calibration}
-            range={range}
-            panorama={panorama}
-            panoramaImage={panoramaImage}
-            observed={live.camera}
-            moving={live.moving}
-            target={target}
-            onChange={(position) => setTarget({ ...target, ...position })}
-            preview={preview.frame}
-            limits={{ rect: device.soft_limits, polygon: device.soft_polygon }}
-            onSaveLimits={saveLimits}
-            zoomLimit={zl}
-            disabled={disabled}
-          />
-        </div>
-      )}
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,1fr)]">
-        <div>
-          {!device.calibration && (
+    <Card className="panel gap-0 p-4 sm:p-6">
+      {/* The camera view takes all the width it can; controls sit beside it
+          on wide screens and below it on narrow ones. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,360px)]">
+        <div className="min-w-0 space-y-3">
+          {device.calibration ? (
+            <PtzMap
+              calibration={device.calibration}
+              range={range}
+              panorama={panorama}
+              panoramaImage={panoramaImage}
+              observed={live.camera}
+              moving={live.moving}
+              target={target}
+              onChange={(position) => setTarget({ ...target, ...position })}
+              preview={preview.frame}
+              limits={{
+                rect: device.soft_limits,
+                polygon: device.soft_polygon,
+              }}
+              onSaveLimits={saveLimits}
+              zoomLimit={zl}
+              disabled={disabled}
+              onGo={go}
+            />
+          ) : (
             <PtzPositionControl
               target={target}
               observed={current}
@@ -832,6 +842,17 @@ function Camera({
               onChange={(position) => setTarget({ ...target, ...position })}
               preview={preview.frame}
             />
+          )}
+          {ndiSource && (
+            <p className="muted" role="status">
+              NDI® {ndiSource} ·{" "}
+              {!ndi.available
+                ? "runtime not found"
+                : preview.error ||
+                  (ndiStatus?.connected && ndiStatus.width
+                    ? `live ${ndiStatus.width}×${ndiStatus.height}${ndiStatus.ptz_supported ? " · camera reports NDI PTZ" : ""}`
+                    : "connecting…")}
+            </p>
           )}
           {device.connection.type === "visca" && device.ndi_source && (
             <CameraSurvey
@@ -843,20 +864,22 @@ function Camera({
               task={task}
             />
           )}
-          {ndiSource && (
-            <p className="muted mt-2" role="status">
-              NDI® {ndiSource} ·{" "}
-              {!ndi.available
-                ? "runtime not found"
-                : preview.error ||
-                  (ndiStatus?.connected && ndiStatus.width
-                    ? `live ${ndiStatus.width}×${ndiStatus.height}${ndiStatus.ptz_supported ? " · camera reports NDI PTZ" : ""}`
-                    : "connecting…")}
-            </p>
-          )}
         </div>
         <div>
-          {" "}
+          <div className="panel-heading mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <span className="eyebrow">PTZ CONTROL</span>
+              <h2>{device.name}</h2>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <TallyBadge tally={tally} />
+              <Status
+                state={state}
+                simulated={device.connection.type === "simulation"}
+              />
+            </div>
+          </div>
+          {state?.error && <Notice>{state.error}</Notice>}
           <div className="position-display">
             <div>
               <span>PAN</span>
@@ -874,6 +897,14 @@ function Camera({
           <p className="muted">
             {state?.feedback ?? "unknown"} feedback · raw camera units
           </p>
+          <Button
+            className="mb-3 w-full"
+            size="lg"
+            disabled={disabled}
+            onClick={go}
+          >
+            Go to target
+          </Button>
           <div className="button-row">
             <Button
               disabled={disabled}
@@ -1049,10 +1080,15 @@ function CameraSurvey({
   const age = panorama
     ? Math.max(0, Math.round((Date.now() / 1000 - panorama.created_at) / 60))
     : null;
+  // Slow scans zoom in for a sharper panorama with about four times the
+  // frames; fast scans use the widest zoom.
+  const [detail, setDetail] = useState<ScanDetail>("detailed");
   const start = (job: "calibrate" | "scan") => {
     setConfirming(null);
     void task(() =>
-      job === "calibrate" ? api.calibrate(device.id) : api.scan(device.id),
+      job === "calibrate"
+        ? api.calibrate(device.id)
+        : api.scan(device.id, detail),
     );
   };
   return (
@@ -1076,7 +1112,9 @@ function CameraSurvey({
           >
             {confirming === "calibrate"
               ? "Move camera to calibrate"
-              : "Move camera to scan"}
+              : detail === "detailed"
+                ? "Move camera to scan · 🐢 about 8 min"
+                : "Move camera to scan · 🐇 about 2 min"}
           </Button>
           <Button variant="outline" onClick={() => setConfirming(null)}>
             Cancel
@@ -1098,6 +1136,34 @@ function CameraSurvey({
           >
             {panorama ? "Rescan panorama" : "Scan panorama"}
           </Button>
+          <div
+            role="group"
+            aria-label="Scan speed"
+            className="flex rounded-md border"
+          >
+            {(
+              [
+                [
+                  "detailed",
+                  "🐢 Slow",
+                  "Sharper: zooms in, about 4× the frames",
+                ],
+                ["fast", "🐇 Fast", "Quicker: widest zoom, softer image"],
+              ] as const
+            ).map(([value, label, hint]) => (
+              <Button
+                key={value}
+                type="button"
+                size="sm"
+                title={hint}
+                variant={detail === value ? "secondary" : "ghost"}
+                aria-pressed={detail === value}
+                onClick={() => setDetail(value)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
         </div>
       )}
     </div>

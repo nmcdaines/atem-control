@@ -140,21 +140,47 @@ async fn calibrate(
 ) -> std::result::Result<Json<String>, ApiError> {
     Ok(Json(app.calibrate_camera(&device_id).await?))
 }
+#[derive(Deserialize)]
+struct ScanRequest {
+    #[serde(default)]
+    detail: ScanDetail,
+}
 async fn scan(
     State(app): App,
     Path(device_id): Path<String>,
+    Json(request): Json<ScanRequest>,
 ) -> std::result::Result<Json<String>, ApiError> {
-    Ok(Json(app.scan_camera(&device_id).await?))
+    Ok(Json(app.scan_camera(&device_id, request.detail).await?))
 }
+/// The stored panorama. Its ETag is the scan time, so browsers keep their
+/// copy across reloads and backend restarts until a new scan replaces it.
 async fn panorama(
     State(app): App,
     Path(device_id): Path<String>,
+    headers: axum::http::HeaderMap,
 ) -> std::result::Result<Response, ApiError> {
+    let Some(info) = app
+        .snapshot()
+        .await
+        .panoramas
+        .into_iter()
+        .find(|p| p.device_id == device_id)
+    else {
+        return Ok(StatusCode::NOT_FOUND.into_response());
+    };
+    let etag = format!("\"{}\"", info.created_at);
+    if headers
+        .get(header::IF_NONE_MATCH)
+        .is_some_and(|tag| tag.as_bytes() == etag.as_bytes())
+    {
+        return Ok((StatusCode::NOT_MODIFIED, [(header::ETAG, etag)]).into_response());
+    }
     Ok(match app.panorama_jpeg(&device_id).await? {
         Some(jpeg) => (
             [
-                (header::CONTENT_TYPE, "image/jpeg"),
-                (header::CACHE_CONTROL, "no-cache"),
+                (header::CONTENT_TYPE, "image/jpeg".to_owned()),
+                (header::CACHE_CONTROL, "no-cache".to_owned()),
+                (header::ETAG, etag),
             ],
             jpeg,
         )

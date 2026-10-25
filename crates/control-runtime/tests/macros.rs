@@ -219,7 +219,10 @@ async fn scans_are_refused_while_the_camera_is_on_air() {
     app.execute("demo-atem", Command::SetProgram { input: 3 })
         .await
         .unwrap();
-    let error = app.scan_camera("demo-camera").await.unwrap_err();
+    let error = app
+        .scan_camera("demo-camera", ScanDetail::Fast)
+        .await
+        .unwrap_err();
     assert!(error.to_string().contains("on air"), "{error}");
     let error = app.calibrate_camera("demo-camera").await.unwrap_err();
     assert!(error.to_string().contains("on air"), "{error}");
@@ -227,6 +230,9 @@ async fn scans_are_refused_while_the_camera_is_on_air() {
     app.execute("demo-atem", Command::SetProgram { input: 1 })
         .await
         .unwrap();
-    let error = app.scan_camera("demo-camera").await.unwrap_err();
+    let error = app
+        .scan_camera("demo-camera", ScanDetail::Fast)
+        .await
+        .unwrap_err();
     assert!(error.to_string().contains("VISCA"), "{error}");
 }

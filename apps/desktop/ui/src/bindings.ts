@@ -48,7 +48,13 @@ export type RunStatus = "running" | "completed" | "cancelled" | "failed";
 export type Run = { id: string, macro_id: string, name: string, status: RunStatus, completed_steps: number, total_steps: number, error: string | null, };
 export type PtzPoint = { pan: number, tilt: number, };
 export type PtzRange = { pan_min: number, pan_max: number, tilt_min: number, tilt_max: number, };
-export type FocalSample = { zoom: number, focal_px: number, };
+export type FocalSample = { zoom: number, focal_px: number, 
+/**
+ * Where this zoom's picture centre lies in the widest zoom's picture,
+ * relative to its centre, in calibration pixels at the widest zoom
+ * (right and down positive). Lenses drift slightly as they zoom.
+ */
+centre_x: number, centre_y: number, };
 export type CameraCalibration = { 
 /**
  * Raw pan units per degree. Not measurable from images alone, so it comes
@@ -75,6 +81,7 @@ frame_width: number, frame_height: number,
  * Focal length in pixels at sampled zoom positions, ascending by zoom.
  */
 focal: Array<FocalSample>, };
+export type ScanDetail = "fast" | "detailed";
 export type PanoramaInfo = { device_id: string, width: number, height: number, 
 /**
  * Pan at the image's left and right edges (left may be numerically larger).

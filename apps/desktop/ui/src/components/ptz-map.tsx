@@ -6,12 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { adjustZoom, clamp } from "@/lib/ptz";
+import { useAvailableHeight } from "@/lib/use-available-height";
 import {
   clampToLimits,
   frameRect,
   fromView,
   layout,
+  limitsBounds,
   mapExtent,
+  padRect,
+  previewCells,
   rangeFromCorners,
   rangeRect,
   toView,
@@ -26,7 +30,10 @@ import type {
 } from "@/bindings";
 
 const MIN_HEIGHT = 200;
-const MAX_HEIGHT = 460;
+/** Room kept under the map for the zoom slider and hint. */
+const BELOW_MAP = 120;
+/** Space shown around the safe area, as a fraction of its size. */
+const SAFE_AREA_MARGIN = 0.08;
 /** Time constant for the current-view box gliding between position samples. */
 const GLIDE_MS = 120;
 
@@ -50,7 +57,10 @@ export function PtzMap({
   onSaveLimits,
   zoomLimit,
   disabled,
+  onGo,
 }: {
+  /** Moves the camera to the target (pan, tilt and zoom). */
+  onGo?: () => void;
   calibration: CameraCalibration;
   range: PtzRange;
   panorama?: PanoramaInfo | null;
@@ -77,11 +87,28 @@ export function PtzMap({
     setOutline([]);
     setEditing(null);
   };
+  // `extent` is the whole room; `view` is what the map shows. With soft
+  // limits the map frames the safe area, so the shot isn't tiny; while
+  // editing limits it shows the whole room so you can draw anywhere.
   const extent = mapExtent(calibration, range, panorama);
-  const aspect = (extent.right - extent.left) / (extent.top - extent.bottom);
-  const height = Math.round(clamp(width / aspect, MIN_HEIGHT, MAX_HEIGHT));
-  const map = layout(extent, width, height);
-  const geometry = JSON.stringify([calibration, range, panorama?.created_at]);
+  const [wholeRoom, setWholeRoom] = useState(false);
+  const bounds = limitsBounds(calibration, limits);
+  const view =
+    bounds && !wholeRoom && !editing
+      ? padRect(bounds, SAFE_AREA_MARGIN, extent)
+      : extent;
+  const aspect = (view.right - view.left) / (view.top - view.bottom);
+  // Fill the window's height where the map's proportions allow.
+  const frame = useRef<HTMLDivElement>(null);
+  const maxHeight = useAvailableHeight(frame, BELOW_MAP, MIN_HEIGHT);
+  const height = Math.round(clamp(width / aspect, MIN_HEIGHT, maxHeight));
+  const map = layout(view, width, height);
+  const geometry = JSON.stringify([
+    calibration,
+    range,
+    panorama?.created_at,
+    view,
+  ]);
 
   // Inputs the animation loop reads without restarting.
   const latest = useRef({ target, observed, preview, panoramaImage, limits });
@@ -187,7 +214,27 @@ export function PtzMap({
         const view = map.rect(frameRect(calibration, shown.current));
         if (preview) {
           try {
-            context.drawImage(preview, view.x, view.y, view.width, view.height);
+            // Drawn in cells placed by angle so it lines up with the
+            // panorama; cells overlap slightly to hide sub-pixel seams.
+            for (const cell of previewCells(
+              calibration,
+              shown.current,
+              preview.width,
+              preview.height,
+            )) {
+              const at = map.rect(cell.rect);
+              context.drawImage(
+                preview,
+                cell.sx,
+                cell.sy,
+                cell.sw,
+                cell.sh,
+                at.x - 0.25,
+                at.y - 0.25,
+                at.width + 0.5,
+                at.height + 0.5,
+              );
+            }
           } catch {
             // A bitmap released between frames is skipped until the next one.
           }
@@ -317,8 +364,7 @@ export function PtzMap({
     const step = steps[event.key];
     if (disabled || editing || !step) return;
     event.preventDefault();
-    const amount =
-      ((extent.right - extent.left) / 100) * (event.shiftKey ? 10 : 1);
+    const amount = ((view.right - view.left) / 100) * (event.shiftKey ? 10 : 1);
     const current = latest.current.target;
     change({
       ...current,
@@ -427,6 +473,17 @@ export function PtzMap({
             </>
           ) : (
             <>
+              {hasLimits && (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  aria-pressed={wholeRoom}
+                  onClick={() => setWholeRoom(!wholeRoom)}
+                >
+                  {wholeRoom ? "Show safe area" : "Show whole room"}
+                </Button>
+              )}
               <Button
                 type="button"
                 size="xs"
@@ -454,7 +511,10 @@ export function PtzMap({
           )}
         </div>
       </div>
-      <div className="relative w-full overflow-hidden rounded-lg border">
+      <div
+        ref={frame}
+        className="relative w-full overflow-hidden rounded-lg border"
+      >
         <canvas
           ref={canvas}
           role="img"
@@ -492,6 +552,10 @@ export function PtzMap({
                 zoom: latest.current.target.zoom,
               };
             else if (pointers.current.size === 1) aim(point);
+          }}
+          onDoubleClick={() => {
+            // The first click already aimed there.
+            if (!disabled && !editing) onGo?.();
           }}
           onPointerMove={(event) => {
             if (
@@ -535,15 +599,27 @@ export function PtzMap({
             {target.zoom}
           </output>
         </Label>
-        <Slider
-          aria-label="Target zoom"
-          min={0}
-          max={zoomLimit}
-          step={1}
-          value={[target.zoom]}
-          disabled={disabled}
-          onValueChange={([zoom]) => change({ ...target, zoom })}
-        />
+        <div className="flex items-center gap-4">
+          <Slider
+            aria-label="Target zoom"
+            className="flex-1"
+            min={0}
+            max={zoomLimit}
+            step={1}
+            value={[target.zoom]}
+            disabled={disabled}
+            onValueChange={([zoom]) => change({ ...target, zoom })}
+          />
+          {onGo && (
+            <Button
+              type="button"
+              disabled={disabled || !!editing}
+              onClick={onGo}
+            >
+              Go
+            </Button>
+          )}
+        </div>
       </div>
       <p className="mt-3 mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <Scan className="size-3.5" />
@@ -551,7 +627,7 @@ export function PtzMap({
           ? "Click around the area the camera may show, one corner at a time, then save."
           : editing
             ? "Drag across the map to draw the area the camera may show, then save."
-            : "Click or drag to aim, scroll or pinch to zoom, then apply the target. The green box follows the camera."}
+            : "Click or drag to aim, scroll or pinch to zoom, then Go (or double-click to aim and go). The green box follows the camera."}
       </p>
     </section>
   );

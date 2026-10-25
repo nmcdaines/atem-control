@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { adjustZoom, clamp, frameFor, targetAt } from "@/lib/ptz";
 import type { PtzLimits, PtzPosition } from "@/lib/ptz";
+import { useAvailableHeight } from "@/lib/use-available-height";
 
 export function PtzPositionControl({
   target,
@@ -32,6 +33,10 @@ export function PtzPositionControl({
 }) {
   const [previewMode, setPreviewMode] = useState<"frame" | "full">("frame");
   const canvas = useRef<HTMLCanvasElement>(null);
+  // 16:9 where it fits, but no taller than the window has room for, keeping
+  // the pan and zoom sliders below in view.
+  const area = useRef<HTMLDivElement>(null);
+  const available = useAvailableHeight(area, 150);
   // Several pointer or wheel events can arrive before a re-render, so each
   // change builds on the latest value rather than the rendered prop.
   const latest = useRef(target);
@@ -266,7 +271,11 @@ export function PtzPositionControl({
         </div>
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)_2rem] gap-4">
-        <div className="relative aspect-video overflow-hidden rounded-lg border">
+        <div
+          ref={area}
+          className="relative overflow-hidden rounded-lg border"
+          style={{ height: Math.min((size.width * 9) / 16, available) }}
+        >
           <canvas
             ref={canvas}
             role="img"

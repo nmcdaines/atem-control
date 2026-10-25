@@ -28,6 +28,7 @@ fn main() {
         PtzRange::decl(&cfg),
         FocalSample::decl(&cfg),
         CameraCalibration::decl(&cfg),
+        ScanDetail::decl(&cfg),
         PanoramaInfo::decl(&cfg),
         NdiSource::decl(&cfg),
         NdiPreview::decl(&cfg),

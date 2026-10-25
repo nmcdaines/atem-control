@@ -26,6 +26,44 @@ export function focalAt(calibration: CameraCalibration, zoom: number) {
   return samples[samples.length - 1].focal_px;
 }
 
+/**
+ * Where the picture centre points at `zoom`, relative to the reported
+ * pan/tilt, in raw units: lenses drift slightly as they zoom. Mirrors the core.
+ */
+export function centreOffset(calibration: CameraCalibration, zoom: number) {
+  const samples = calibration.focal;
+  if (!samples.length) return { pan: 0, tilt: 0 };
+  let [x, y] = [samples[0].centre_x, samples[0].centre_y];
+  const after = samples.findIndex((s) => s.zoom >= zoom);
+  if (after === -1) {
+    const last = samples[samples.length - 1];
+    [x, y] = [last.centre_x, last.centre_y];
+  } else if (after > 0) {
+    const [a, b] = [samples[after - 1], samples[after]];
+    const t = (zoom - a.zoom) / Math.max(1, b.zoom - a.zoom);
+    [x, y] = [
+      a.centre_x + (b.centre_x - a.centre_x) * t,
+      a.centre_y + (b.centre_y - a.centre_y) * t,
+    ];
+  }
+  const wide = samples[0].focal_px;
+  const degrees = (v: number) => (Math.atan(v / wide) * 180) / Math.PI;
+  return {
+    pan:
+      degrees(x) * calibration.pan_units_per_degree * calibration.pan_direction,
+    tilt:
+      degrees(-y) *
+      calibration.tilt_units_per_degree *
+      calibration.tilt_direction,
+  };
+}
+
+/** Where the picture centre actually points for a camera position. */
+function pictureCentre(calibration: CameraCalibration, position: Position) {
+  const offset = centreOffset(calibration, position.zoom);
+  return { pan: position.pan + offset.pan, tilt: position.tilt + offset.tilt };
+}
+
 /** Visible frame size in raw pan/tilt units at `zoom`. */
 export function viewUnits(calibration: CameraCalibration, zoom: number) {
   const focal = focalAt(calibration, zoom);
@@ -77,7 +115,8 @@ export function frameRect(
   position: Position,
 ): Rect {
   const { width, height } = viewUnits(calibration, position.zoom);
-  const { x, y } = toView(calibration, position.pan, position.tilt);
+  const centre = pictureCentre(calibration, position);
+  const { x, y } = toView(calibration, centre.pan, centre.tilt);
   return {
     left: x - width / 2,
     right: x + width / 2,
@@ -190,11 +229,12 @@ export function withinLimits(
   target: Position,
 ) {
   const { width, height } = viewUnits(calibration, target.zoom);
+  const centre = pictureCentre(calibration, target);
   const frame: [number, number, number, number] = [
-    target.pan - width / 2,
-    target.pan + width / 2,
-    target.tilt - height / 2,
-    target.tilt + height / 2,
+    centre.pan - width / 2,
+    centre.pan + width / 2,
+    centre.tilt - height / 2,
+    centre.tilt + height / 2,
   ];
   const { rect, polygon } = limits;
   const inRect =
@@ -226,18 +266,29 @@ export function clampToLimits(
   let next = target;
   if (limits.rect) {
     const { width, height } = viewUnits(calibration, target.zoom);
+    const offset = centreOffset(calibration, target.zoom);
+    // Fit the picture centre, then convert back to the commanded position.
     const fit = (value: number, half: number, min: number, max: number) =>
       max - min < half * 2
-        ? Math.round((min + max) / 2)
-        : Math.round(clamp(value, min + half, max - half));
+        ? (min + max) / 2
+        : clamp(value, min + half, max - half);
     next = {
       ...next,
-      pan: fit(next.pan, width / 2, limits.rect.pan_min, limits.rect.pan_max),
-      tilt: fit(
-        next.tilt,
-        height / 2,
-        limits.rect.tilt_min,
-        limits.rect.tilt_max,
+      pan: Math.round(
+        fit(
+          next.pan + offset.pan,
+          width / 2,
+          limits.rect.pan_min,
+          limits.rect.pan_max,
+        ) - offset.pan,
+      ),
+      tilt: Math.round(
+        fit(
+          next.tilt + offset.tilt,
+          height / 2,
+          limits.rect.tilt_min,
+          limits.rect.tilt_max,
+        ) - offset.tilt,
       ),
     };
   }
@@ -300,4 +351,98 @@ export function rangeFromCorners(
     tilt_min: Math.round(Math.min(p.tilt, q.tilt)),
     tilt_max: Math.round(Math.max(p.tilt, q.tilt)),
   };
+}
+
+/** The view-unit bounding box of the soft limits, or null if there are none. */
+export function limitsBounds(
+  calibration: CameraCalibration,
+  limits: Limits,
+): Rect | null {
+  if (limits.polygon?.length) {
+    const points = limits.polygon.map((p) =>
+      toView(calibration, p.pan, p.tilt),
+    );
+    const xs = points.map((p) => p.x);
+    const ys = points.map((p) => p.y);
+    return {
+      left: Math.min(...xs),
+      right: Math.max(...xs),
+      top: Math.max(...ys),
+      bottom: Math.min(...ys),
+    };
+  }
+  return limits.rect ? rangeRect(calibration, limits.rect) : null;
+}
+
+/** `rect` grown by `fraction` of its size on every side, kept within `outer`. */
+export function padRect(rect: Rect, fraction: number, outer: Rect): Rect {
+  const dx = (rect.right - rect.left) * fraction;
+  const dy = (rect.top - rect.bottom) * fraction;
+  return {
+    left: Math.max(outer.left, rect.left - dx),
+    right: Math.min(outer.right, rect.right + dx),
+    top: Math.min(outer.top, rect.top + dy),
+    bottom: Math.max(outer.bottom, rect.bottom - dy),
+  };
+}
+
+export type PreviewCell = {
+  // Source rectangle in the preview image, in its pixels.
+  sx: number;
+  sy: number;
+  sw: number;
+  sh: number;
+  // Where it belongs on the map, in view units.
+  rect: Rect;
+};
+
+/**
+ * Splits a live camera image into cells placed at the angles they show. A
+ * camera image is a flat (pinhole) projection whose edges cover fewer degrees
+ * per pixel than its centre, while the map is linear in angle; stretching the
+ * whole image evenly over the frame would make its centre look too small.
+ */
+export function previewCells(
+  calibration: CameraCalibration,
+  position: Position,
+  imageWidth: number,
+  imageHeight: number,
+  columns = 12,
+  rows = 8,
+): PreviewCell[] {
+  // Focal length in this image's pixels.
+  const focal =
+    (focalAt(calibration, position.zoom) * imageWidth) /
+    calibration.frame_width;
+  const picture = pictureCentre(calibration, position);
+  const centre = toView(calibration, picture.pan, picture.tilt);
+  const degrees = (pixels: number) =>
+    (Math.atan(pixels / focal) * 180) / Math.PI;
+  const xAt = (px: number) =>
+    centre.x + degrees(px - imageWidth / 2) * calibration.pan_units_per_degree;
+  const yAt = (py: number) =>
+    centre.y +
+    degrees(imageHeight / 2 - py) * calibration.tilt_units_per_degree;
+  const cells: PreviewCell[] = [];
+  for (let row = 0; row < rows; row++) {
+    for (let column = 0; column < columns; column++) {
+      const sx = (imageWidth * column) / columns;
+      const sy = (imageHeight * row) / rows;
+      const sw = imageWidth / columns;
+      const sh = imageHeight / rows;
+      cells.push({
+        sx,
+        sy,
+        sw,
+        sh,
+        rect: {
+          left: xAt(sx),
+          right: xAt(sx + sw),
+          top: yAt(sy),
+          bottom: yAt(sy + sh),
+        },
+      });
+    }
+  }
+  return cells;
 }

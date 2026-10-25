@@ -599,8 +599,8 @@ test("calibrated camera map aims, draws soft limits and keeps targets inside the
     frame_width: 640,
     frame_height: 360,
     focal: [
-      { zoom: 0, focal_px: 556.2 },
-      { zoom: 16384, focal_px: 5214.6 },
+      { zoom: 0, focal_px: 556.2, centre_x: 0, centre_y: 0 },
+      { zoom: 16384, focal_px: 5214.6, centre_x: 0, centre_y: 0 },
     ],
   };
   camera.ptz_range = {
@@ -645,6 +645,15 @@ test("calibrated camera map aims, draws soft limits and keeps targets inside the
     ).config.devices.find((d) => d.id === "demo-camera")!.soft_limits;
   await expect.poll(saved).toBeTruthy();
   const limits = (await saved())!;
+  // The map now frames the safe area, which fills more of it, and can
+  // switch back to the whole room.
+  const framedBox = (await map.boundingBox())!;
+  await page.getByRole("button", { name: "Show whole room" }).click();
+  await expect(
+    page.getByRole("button", { name: "Show safe area" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Show safe area" }).click();
+  expect((await map.boundingBox())!.height).toBeCloseTo(framedBox.height, 0);
 
   // Aiming far outside holds the target's whole frame inside the limits.
   // Earlier tests may leave the camera zoomed in; check at the widest zoom.

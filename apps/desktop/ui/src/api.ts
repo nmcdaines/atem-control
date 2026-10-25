@@ -5,6 +5,7 @@ import type {
   DeviceState,
   NdiSource,
   PostgresImportSettings,
+  ScanDetail,
   Snapshot,
 } from "./bindings";
 
@@ -71,10 +72,12 @@ export const api = {
           `devices/${encodeURIComponent(device_id)}/calibrate`,
           {},
         ),
-  scan: (device_id: string) =>
+  scan: (device_id: string, detail: ScanDetail = "fast") =>
     isTauri()
-      ? invoke<string>("scan_camera", { deviceId: device_id })
-      : request<string>(`devices/${encodeURIComponent(device_id)}/scan`, {}),
+      ? invoke<string>("scan_camera", { deviceId: device_id, detail })
+      : request<string>(`devices/${encodeURIComponent(device_id)}/scan`, {
+          detail,
+        }),
   // The stored panorama JPEG, or null if the camera has not been scanned.
   panorama: async (device_id: string): Promise<Blob | null> => {
     if (isTauri()) {

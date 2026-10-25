@@ -109,6 +109,48 @@ impl Gray {
     fn at(&self, x: usize, y: usize) -> f32 {
         self.data[y * self.width + x]
     }
+    /// Bilinear resample to `width`×`height`, averaging when shrinking.
+    pub fn resize(&self, width: usize, height: usize) -> Gray {
+        let mut source = self.clone();
+        // Halve first while more than twice too big, so shrinking averages.
+        while source.width >= width * 2 && source.height >= height * 2 {
+            source = source.half();
+        }
+        let (sx, sy) = (
+            source.width as f32 / width as f32,
+            source.height as f32 / height as f32,
+        );
+        let mut data = Vec::with_capacity(width * height);
+        for y in 0..height {
+            let fy = ((y as f32 + 0.5) * sy - 0.5).clamp(0.0, (source.height - 1) as f32);
+            let (y0, ty) = (fy.floor() as usize, fy.fract());
+            let y1 = (y0 + 1).min(source.height - 1);
+            for x in 0..width {
+                let fx = ((x as f32 + 0.5) * sx - 0.5).clamp(0.0, (source.width - 1) as f32);
+                let (x0, tx) = (fx.floor() as usize, fx.fract());
+                let x1 = (x0 + 1).min(source.width - 1);
+                let top = source.at(x0, y0) * (1.0 - tx) + source.at(x1, y0) * tx;
+                let bottom = source.at(x0, y1) * (1.0 - tx) + source.at(x1, y1) * tx;
+                data.push(top * (1.0 - ty) + bottom * ty);
+            }
+        }
+        Gray {
+            width,
+            height,
+            data,
+        }
+    }
+    /// The `width`×`height` region starting at (`x`, `y`).
+    pub fn crop(&self, x: usize, y: usize, width: usize, height: usize) -> Gray {
+        let (width, height) = (width.min(self.width - x), height.min(self.height - y));
+        Gray {
+            width,
+            height,
+            data: (y..y + height)
+                .flat_map(|row| self.data[row * self.width + x..][..width].iter().copied())
+                .collect(),
+        }
+    }
     /// Halves both dimensions by averaging 2×2 blocks.
     fn half(&self) -> Gray {
         let (width, height) = ((self.width / 2).max(1), (self.height / 2).max(1));
@@ -267,6 +309,161 @@ pub fn most_detailed(image: &Gray, window_width: usize, window_height: usize) ->
         }
     }
     centre
+}
+
+/// Which way a calibration move turned the camera.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Axis {
+    Pan,
+    Tilt,
+}
+
+/// The central part of a pan/tilt move: how far content in the middle of
+/// the frame moved, and the geometry needed to undo the lens's edge stretch.
+///
+/// Matching the whole frame overstates focal length, because a pinhole lens
+/// magnifies the edges: content there moves further than at the centre. So
+/// only a central window half the frame long is matched, and its remaining
+/// stretch is modelled exactly.
+struct CentralShift {
+    shift: Shift,
+    /// Distance content moved within the window, in pixels.
+    moved: f32,
+    /// Range of positions (from the frame centre) the match was made over.
+    span: (f32, f32),
+}
+
+fn central_shift(a: &Gray, b: &Gray, axis: Axis) -> Option<CentralShift> {
+    let along = match axis {
+        Axis::Pan => a.width,
+        Axis::Tilt => a.height,
+    };
+    let window = |image: &Gray| match axis {
+        Axis::Pan => image.crop(a.width / 4, a.height / 5, a.width / 2, a.height * 3 / 5),
+        Axis::Tilt => image.crop(a.width / 5, a.height / 4, a.width * 3 / 5, a.height / 2),
+    };
+    let (wa, wb) = (window(a), window(b));
+    let (max_dx, max_dy) = match axis {
+        Axis::Pan => (wa.width * 2 / 5, wa.height / 6),
+        Axis::Tilt => (wa.width / 6, wa.height * 2 / 5),
+    };
+    let shift = estimate_shift(&wa, &wb, max_dx, max_dy)?;
+    let moved = match axis {
+        Axis::Pan => shift.dx.abs(),
+        Axis::Tilt => shift.dy.abs(),
+    };
+    // Content that left the window, and the 1/16 margin `estimate_shift`
+    // ignores, take no part in the match.
+    let half = along as f32 / 4.0;
+    let margin = (2.0 * half / 16.0).floor();
+    Some(CentralShift {
+        shift,
+        moved,
+        span: (-half + margin + moved, half - margin),
+    })
+}
+
+impl CentralShift {
+    /// Mean displacement over the matched span for a focal length and
+    /// rotation: a point x from the centre moves to f·tan(atan(x/f) − angle).
+    fn mean_move(&self, focal: f32, angle: f32) -> f32 {
+        let samples = 64;
+        let (start, end) = self.span;
+        (0..samples)
+            .map(|i| {
+                let x = start + (end - start) * (i as f32 + 0.5) / samples as f32;
+                x - focal * ((x / focal).atan() - angle).tan()
+            })
+            .sum::<f32>()
+            / samples as f32
+    }
+}
+
+/// Focal length (in `a`'s pixels) from two frames taken `angle` radians
+/// apart by a pan or tilt, with the measured shift.
+pub fn focal_from_rotation(a: &Gray, b: &Gray, angle: f32, axis: Axis) -> Option<(f32, Shift)> {
+    let central = central_shift(a, b, axis)?;
+    let angle = angle.abs();
+    let mut focal = central.moved / angle.tan();
+    for _ in 0..8 {
+        focal *= central.moved / central.mean_move(focal, angle);
+    }
+    focal.is_finite().then_some((focal, central.shift))
+}
+
+/// The angle (radians) a pan or tilt turned between two frames, given the
+/// focal length, with the measured shift. The inverse of
+/// [`focal_from_rotation`], used to scale tilt units once pan has given the
+/// focal length.
+pub fn rotation_from_focal(a: &Gray, b: &Gray, focal: f32, axis: Axis) -> Option<(f32, Shift)> {
+    let central = central_shift(a, b, axis)?;
+    let mut angle = (central.moved / focal).atan();
+    for _ in 0..8 {
+        angle *= central.moved / central.mean_move(focal, angle);
+    }
+    angle.is_finite().then_some((angle, central.shift))
+}
+
+/// How one zoom level relates to another, both taken from the same direction.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ZoomStep {
+    /// How much more magnified the second frame is.
+    pub ratio: f32,
+    /// Where the second frame's centre lies in the first, relative to the
+    /// first's centre, in its pixels (right and down positive). Lenses often
+    /// drift slightly off-centre as they zoom.
+    pub centre: (f32, f32),
+    pub score: f32,
+}
+
+/// Measures `b` against `a`, taken from the same direction at a higher zoom,
+/// searching ratios `min..=max`. Zooming is a magnification about (nearly) the
+/// picture centre, so `b` shrunk by the ratio matches the middle of `a`, up to
+/// a small drift that the match also finds.
+pub fn zoom_ratio(a: &Gray, b: &Gray, min: f32, max: f32) -> Option<ZoomStep> {
+    let measure = |ratio: f32| {
+        let (w, h) = (
+            (b.width as f32 / ratio).round() as usize,
+            (b.height as f32 / ratio).round() as usize,
+        );
+        if w < 32 || h < 18 || w > a.width || h > a.height {
+            return None;
+        }
+        let small = b.resize(w, h);
+        let centre = a.crop((a.width - w) / 2, (a.height - h) / 2, w, h);
+        let shift = estimate_shift(&centre, &small, w / 12 + 2, h / 12 + 2)?;
+        // Content at the middle of `a` appears `shift` away in the shrunk `b`,
+        // so `b`'s centre is the opposite way from `a`'s.
+        Some(ZoomStep {
+            ratio,
+            centre: (-shift.dx, -shift.dy),
+            score: shift.score,
+        })
+    };
+    // Coarse logarithmic search, then refine around the best.
+    let mut best: Option<ZoomStep> = None;
+    let better = |candidate: Option<ZoomStep>, best: &mut Option<ZoomStep>| {
+        if let Some(c) = candidate
+            && best.is_none_or(|b| c.score > b.score)
+        {
+            *best = Some(c);
+        }
+    };
+    let steps = 40;
+    for i in 0..=steps {
+        better(
+            measure(min * (max / min).powf(i as f32 / steps as f32)),
+            &mut best,
+        );
+    }
+    let mut step = (max / min).powf(1.0 / steps as f32);
+    for _ in 0..12 {
+        step = step.sqrt();
+        let around = best?.ratio;
+        better(measure(around / step), &mut best);
+        better(measure(around * step), &mut best);
+    }
+    best
 }
 
 /// One captured frame and where the camera pointed: yaw is degrees towards
@@ -655,5 +852,115 @@ mod tests {
             gains.iter().all(|g| (0.7..1.2).contains(g)),
             "gains {gains:?}"
         );
+    }
+
+    #[test]
+    fn focal_length_from_a_pan_is_unbiased_at_wide_and_narrow_views() {
+        for focal in [556.0f32, 1200.0, 3000.0] {
+            let angle = (640.0f32 / 8.0 / focal).atan();
+            let a = render_view(0.0, 0.0, focal).gray();
+            let b = render_view(angle.to_degrees(), 0.0, focal).gray();
+            let (measured, shift) = focal_from_rotation(&a, &b, angle, Axis::Pan).unwrap();
+            assert!(shift.score > 0.9);
+            assert!(
+                (measured / focal - 1.0).abs() < 0.004,
+                "{focal}: {measured}"
+            );
+            // Whole-frame matching overstates focal length at wide views.
+            let whole = estimate_shift(&a, &b, 213, 60).unwrap().dx.abs() / angle.tan();
+            if focal < 1000.0 {
+                assert!(whole / focal - 1.0 > 0.01, "{focal}: {whole}");
+            }
+        }
+        // Tilt works the same way vertically.
+        let focal = 556.0f32;
+        let angle = (360.0f32 / 8.0 / focal).atan();
+        let a = render_view(0.0, 0.0, focal).gray();
+        let b = render_view(0.0, angle.to_degrees(), focal).gray();
+        let (measured, shift) = focal_from_rotation(&a, &b, angle, Axis::Tilt).unwrap();
+        assert!(shift.dy > 0.0, "tilting up moves content down");
+        assert!((measured / focal - 1.0).abs() < 0.004, "tilt: {measured}");
+        let (turned, _) = rotation_from_focal(&a, &b, focal, Axis::Tilt).unwrap();
+        assert!((turned / angle - 1.0).abs() < 0.004, "tilt angle: {turned}");
+    }
+
+    #[test]
+    fn zoom_ratios_and_centre_drift_are_measured_directly() {
+        for (focal, ratio) in [(556.0f32, 1.2f32), (900.0, 1.35), (2500.0, 1.4)] {
+            let a = render_view(3.0, -2.0, focal).gray();
+            let b = render_view(3.0, -2.0, focal * ratio).gray();
+            let step = zoom_ratio(&a, &b, 1.0, 2.0).unwrap();
+            assert!(step.score > 0.9, "{step:?}");
+            assert!(
+                (step.ratio / ratio - 1.0).abs() < 0.005,
+                "{focal}×{ratio}: {step:?}"
+            );
+            assert!(
+                step.centre.0.abs() < 0.5 && step.centre.1.abs() < 0.5,
+                "{step:?}"
+            );
+        }
+        // A zoomed view whose centre drifted right and down by a known angle.
+        let focal = 900.0f32;
+        let (right, down) = ((6.0f32 / focal).atan(), (4.0f32 / focal).atan());
+        let a = render_view(3.0, -2.0, focal).gray();
+        let b = render_view(
+            3.0 + right.to_degrees(),
+            -2.0 - down.to_degrees(),
+            focal * 1.3,
+        )
+        .gray();
+        let step = zoom_ratio(&a, &b, 1.0, 2.0).unwrap();
+        // Within a pixel (about 0.06° here) of the true drift.
+        assert!(
+            (step.centre.0 - 6.0).abs() < 1.0 && (step.centre.1 - 4.0).abs() < 1.0,
+            "{step:?}"
+        );
+    }
+
+    fn render_view(yaw: f32, pitch: f32, focal: f32) -> Rgb {
+        let camera = Camera::new(&Tile {
+            image: Rgb::new(640, 360),
+            yaw,
+            pitch,
+            focal_px: focal,
+        });
+        let mut image = Rgb::new(640, 360);
+        for y in 0..360 {
+            for x in 0..640 {
+                let (u, v) = (
+                    (x as f32 - camera.centre.0) / focal,
+                    (camera.centre.1 - y as f32) / focal,
+                );
+                let d: [f32; 3] = std::array::from_fn(|i| {
+                    camera.forward[i] + u * camera.right[i] + v * camera.up[i]
+                });
+                let yaw = d[0].atan2(d[2]).to_degrees();
+                let pitch = d[1].atan2((d[0] * d[0] + d[2] * d[2]).sqrt()).to_degrees();
+                let value = noise(yaw, pitch);
+                image.data[(y * 640 + x) * 3..][..3].copy_from_slice(&[value; 3]);
+            }
+        }
+        image
+    }
+    /// Non-repeating value noise over world angles, several octaves.
+    fn noise(yaw: f32, pitch: f32) -> u8 {
+        let hash = |x: i32, y: i32| {
+            let mut h = (x as u32).wrapping_mul(374761393) ^ (y as u32).wrapping_mul(668265263);
+            h = (h ^ (h >> 13)).wrapping_mul(1274126177);
+            ((h ^ (h >> 16)) & 0xffff) as f32 / 65535.0
+        };
+        let mut total = 0.0;
+        for (octave, weight) in [(0.5f32, 0.5f32), (1.5, 0.3), (4.0, 0.2)] {
+            let (x, y) = (yaw * octave, pitch * octave);
+            let (x0, y0) = (x.floor(), y.floor());
+            let (fx, fy) = (x - x0, y - y0);
+            let (sx, sy) = (fx * fx * (3.0 - 2.0 * fx), fy * fy * (3.0 - 2.0 * fy));
+            let (xi, yi) = (x0 as i32, y0 as i32);
+            let top = hash(xi, yi) * (1.0 - sx) + hash(xi + 1, yi) * sx;
+            let bottom = hash(xi, yi + 1) * (1.0 - sx) + hash(xi + 1, yi + 1) * sx;
+            total += weight * (top * (1.0 - sy) + bottom * sy);
+        }
+        (total * 255.0) as u8
     }
 }

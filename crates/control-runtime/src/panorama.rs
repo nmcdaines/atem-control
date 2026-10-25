@@ -3,7 +3,10 @@
 //! runs, and both return the camera to where it started.
 use crate::{Controller, ndi::Stills};
 use control_core::*;
-use control_vision::{Extent, Rgb, Tile, estimate_shift, most_detailed, stitch};
+use control_vision::{
+    Axis, Extent, Rgb, Tile, estimate_shift, focal_from_rotation, most_detailed,
+    rotation_from_focal, stitch, zoom_ratio,
+};
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -22,13 +25,11 @@ const SETTLE: Duration = Duration::from_millis(400);
 const ZOOM_SETTLE: Duration = Duration::from_millis(1500);
 /// Fraction of a frame that neighbouring scan tiles overlap.
 const OVERLAP: f32 = 0.3;
-/// Expected focal length growth per 2048 zoom units, assuming roughly 10×
-/// optical zoom across the full range.
-const ZOOM_STEP_GROWTH: f32 = 1.3335;
 /// Pan/tilt speed for calibration and scan moves.
 const SPEED: u8 = 20;
-const PANORAMA_MAX_WIDTH: f32 = 4096.0;
-const PANORAMA_MAX_HEIGHT: f32 = 2048.0;
+/// Size caps for the stitched image; within a browser canvas's limits.
+const PANORAMA_MAX_WIDTH: f32 = 9000.0;
+const PANORAMA_MAX_HEIGHT: f32 = 4096.0;
 
 struct Camera {
     device: Device,
@@ -64,23 +65,33 @@ impl Controller {
         .await
     }
 
-    /// Sweeps the camera across its range at its widest zoom, stitches the
-    /// frames into a panorama and stores it.
-    pub async fn scan_camera(self: &Arc<Self>, device_id: &str) -> Result<String> {
+    /// Sweeps the camera across its range, stitches the frames into a
+    /// panorama and stores it. A detailed scan zooms in for a sharper image.
+    pub async fn scan_camera(
+        self: &Arc<Self>,
+        device_id: &str,
+        detail: ScanDetail,
+    ) -> Result<String> {
         let camera = self.hybrid_camera(device_id).await?;
         let calibration = camera.device.calibration.clone().ok_or_else(|| {
             Error::Invalid("Calibrate the camera before scanning a panorama".into())
         })?;
+        let zoom = scan_zoom(&calibration, detail, camera.zoom_limit);
         // The grid depends on the camera's real limits, which may first need
         // finding, so the step count is an estimate until the scan starts.
-        let estimate = scan_grid(&physical_range(&camera.range, &calibration), &calibration).len();
+        let estimate = scan_grid(
+            &physical_range(&camera.range, &calibration),
+            &calibration,
+            zoom,
+        )
+        .len();
         let name = format!("Scanning {}", camera.device.name);
         self.start_job(
             name,
             estimate + 2,
             move |controller, run_id, token| async move {
                 let (info, jpeg, reach) = controller
-                    .scan(&camera, &calibration, &run_id, &token)
+                    .scan(&camera, &calibration, zoom, &run_id, &token)
                     .await?;
                 controller.store_panorama(info, jpeg).await?;
                 if reach != camera.range {
@@ -207,100 +218,106 @@ impl Controller {
                 .calibration
                 .as_ref()
                 .map_or(DEFAULT_PAN_UNITS_PER_DEGREE, |c| c.pan_units_per_degree);
-            let mut focal_guess = None;
-            let mut samples = vec![];
-            let mut directions = None;
-            let mut tilt_units = None;
-            let mut frame_size = (0, 0);
-            // Zoomed-in levels are measured at the most detailed spot in view,
-            // chosen once the widest level has given directions and focal length.
-            let mut aim = (start.pan, start.tilt);
-            for (index, zoom) in zooms.iter().enumerate() {
+            let too_plain = || {
+                Error::Device(
+                    "The picture was too plain to measure. Point the camera at a detailed scene and retry"
+                        .into(),
+                )
+            };
+            // 1. At the widest zoom: focal length and direction from a pan,
+            //    tilt scale and direction from a tilt.
+            self.camera_move(camera, Command::Zoom { position: zooms[0] }, token)
+                .await?;
+            let base = self
+                .camera_move(camera, pan_tilt(start.pan, start.tilt), token)
+                .await?;
+            let a = self.capture(&stills, ZOOM_SETTLE, token).await?;
+            // Aim for the picture to shift by about an eighth of its width,
+            // guessing a 60° view until measured.
+            let guess = a.width as f32 / 2.0 / 30f32.to_radians().tan();
+            let degrees = (a.width as f32 / 8.0 / guess).atan().to_degrees();
+            let pan_step = units_step(degrees * pan_units, base.pan, camera.range.pan_min, camera.range.pan_max);
+            let moved = self
+                .camera_move(camera, pan_tilt(base.pan + pan_step, base.tilt), token)
+                .await?;
+            let b = self.capture(&stills, SETTLE, token).await?;
+            let angle = ((f32::from(moved.pan) - f32::from(base.pan)) / pan_units).to_radians();
+            let (wide_focal, shift) = focal_from_rotation(&a.gray(), &b.gray(), angle, Axis::Pan)
+                .filter(|(_, s)| s.score > 0.6 && s.dx.abs() > 4.0)
+                .ok_or_else(too_plain)?;
+            // Content moving left means the view turned right.
+            let pan_direction = if shift.dx * angle < 0.0 { 1 } else { -1 };
+            let tilt_step = units_step(degrees * pan_units, base.tilt, camera.range.tilt_min, camera.range.tilt_max);
+            let raised = self
+                .camera_move(camera, pan_tilt(base.pan, base.tilt + tilt_step), token)
+                .await?;
+            let c = self.capture(&stills, SETTLE, token).await?;
+            let (turned, shift) = rotation_from_focal(&a.gray(), &c.gray(), wide_focal, Axis::Tilt)
+                .filter(|(_, s)| s.score > 0.6 && s.dy.abs() > 4.0)
+                .ok_or_else(too_plain)?;
+            let raised_by = f32::from(raised.tilt) - f32::from(base.tilt);
+            let tilt_units = raised_by.abs() / turned.to_degrees();
+            // Content moving down means the view tilted up.
+            let tilt_direction = if shift.dy * raised_by > 0.0 { 1 } else { -1 };
+            self.progress(run_id, 1).await;
+
+            // 2. Zoom in step by step at the most detailed spot, measuring
+            //    each level's magnification and centre drift against the last
+            //    good one. A fully zoomed-in view is about a tenth as wide.
+            let (x, y) = most_detailed(&a.gray(), a.width / 10, a.height / 10);
+            let right = ((x - a.width as f32 / 2.0) / wide_focal).atan().to_degrees();
+            let up = ((a.height as f32 / 2.0 - y) / wide_focal).atan().to_degrees();
+            let clamp = |v: f32, min: i16, max: i16| v.round().clamp(min.into(), max.into()) as i16;
+            let aim = (
+                clamp(
+                    f32::from(base.pan) + right * pan_units * f32::from(pan_direction),
+                    camera.range.pan_min,
+                    camera.range.pan_max,
+                ),
+                clamp(
+                    f32::from(base.tilt) + up * tilt_units * f32::from(tilt_direction),
+                    camera.range.tilt_min,
+                    camera.range.tilt_max,
+                ),
+            );
+            self.camera_move(camera, pan_tilt(aim.0, aim.1), token).await?;
+            let mut previous = self.capture(&stills, SETTLE, token).await?;
+            // Magnification and centre (zoom-0 pixels) of the last good level.
+            let (mut magnification, mut centre) = (1.0f32, (0.0f32, 0.0f32));
+            let mut samples = vec![FocalSample {
+                zoom: zooms[0],
+                focal_px: wide_focal,
+                centre_x: 0.0,
+                centre_y: 0.0,
+            }];
+            for (index, zoom) in zooms.iter().enumerate().skip(1) {
                 self.camera_move(camera, Command::Zoom { position: *zoom }, token)
                     .await?;
-                let base = self.camera_move(camera, pan_tilt(aim.0, aim.1), token).await?;
-                let a = self.capture(&stills, ZOOM_SETTLE, token).await?;
-                frame_size = (a.width, a.height);
-                // Aim for the picture to shift by about an eighth of its width.
-                let focal = focal_guess.unwrap_or(a.width as f32 / 2.0 / 30f32.to_radians().tan());
-                let degrees = (a.width as f32 / 8.0 / focal).atan().to_degrees();
-                let delta = units_step(degrees * pan_units, base.pan, camera.range.pan_min, camera.range.pan_max);
-                let moved = self
-                    .camera_move(camera, pan_tilt(base.pan + delta, base.tilt), token)
-                    .await?;
-                let b = self.capture(&stills, SETTLE, token).await?;
-                let max_shift = a.width / 3;
-                let measured = estimate_shift(&a.gray(), &b.gray(), max_shift, a.height / 6);
-                let Some(shift) = measured.filter(|s| s.score > 0.6 && s.dx.abs() > 4.0) else {
-                    // Too little texture at this zoom; interpolation covers it.
-                    // Keep the estimate growing so the next step stays sensible.
-                    focal_guess = Some(focal * ZOOM_STEP_GROWTH);
+                let frame = self.capture(&stills, ZOOM_SETTLE, token).await?;
+                // Allow for skipped (too plain) levels in between.
+                let Some(step) = zoom_ratio(&previous.gray(), &frame.gray(), 1.02, 4.0)
+                    .filter(|s| s.score > 0.6)
+                else {
                     self.progress(run_id, index + 1).await;
                     continue;
                 };
-                let angle = ((f32::from(moved.pan) - f32::from(base.pan)) / pan_units).to_radians();
-                let focal = shift.dx.abs() / angle.abs().tan();
-                directions.get_or_insert((
-                    // Content moving left means the view turned right.
-                    if shift.dx * angle < 0.0 { 1 } else { -1 },
-                    0,
-                ));
-                if tilt_units.is_none() {
-                    // Measure tilt once, against the same focal length.
-                    let step = units_step(
-                        degrees * pan_units,
-                        base.tilt,
-                        camera.range.tilt_min,
-                        camera.range.tilt_max,
-                    );
-                    let raised = self
-                        .camera_move(camera, pan_tilt(base.pan, base.tilt + step), token)
-                        .await?;
-                    let c = self.capture(&stills, SETTLE, token).await?;
-                    if let Some(shift) = estimate_shift(&a.gray(), &c.gray(), a.width / 6, a.height / 3)
-                        .filter(|s| s.score > 0.6 && s.dy.abs() > 4.0)
-                    {
-                        let degrees = (shift.dy.abs() / focal).atan().to_degrees();
-                        let raised_by = f32::from(raised.tilt) - f32::from(base.tilt);
-                        tilt_units = Some(raised_by.abs() / degrees);
-                        // Content moving down means the view tilted up.
-                        let up = if shift.dy * raised_by > 0.0 { 1 } else { -1 };
-                        directions = directions.map(|(pan, _)| (pan, up));
-                    }
-                }
-                if let (true, Some((pan_direction, tilt_direction)), Some(tilt_units)) =
-                    (samples.is_empty(), directions, tilt_units)
-                {
-                    // Aim at the window a fully zoomed-in view (about a tenth
-                    // of the width) would show with the most texture.
-                    let (x, y) = most_detailed(&a.gray(), a.width / 10, a.height / 10);
-                    let right = ((x - a.width as f32 / 2.0) / focal).atan().to_degrees();
-                    let up = ((a.height as f32 / 2.0 - y) / focal).atan().to_degrees();
-                    let clamp = |v: f32, min: i16, max: i16| v.round().clamp(min.into(), max.into()) as i16;
-                    aim = (
-                        clamp(
-                            f32::from(base.pan) + right * pan_units * f32::from(pan_direction),
-                            camera.range.pan_min,
-                            camera.range.pan_max,
-                        ),
-                        clamp(
-                            f32::from(base.tilt) + up * tilt_units * f32::from(tilt_direction),
-                            camera.range.tilt_min,
-                            camera.range.tilt_max,
-                        ),
-                    );
-                }
-                samples.push(FocalSample { zoom: *zoom, focal_px: focal });
-                focal_guess = Some(focal * ZOOM_STEP_GROWTH);
+                // The step's centre is in the previous level's pixels, which
+                // are `magnification` times larger than zoom-0 pixels.
+                centre = (
+                    centre.0 + step.centre.0 / magnification,
+                    centre.1 + step.centre.1 / magnification,
+                );
+                magnification *= step.ratio;
+                samples.push(FocalSample {
+                    zoom: *zoom,
+                    focal_px: wide_focal * magnification,
+                    centre_x: centre.0,
+                    centre_y: centre.1,
+                });
+                previous = frame;
                 self.progress(run_id, index + 1).await;
             }
-            let (Some((pan_direction, tilt_direction)), Some(tilt_units)) = (directions, tilt_units)
-            else {
-                return Err(Error::Device(
-                    "The picture was too plain to measure. Point the camera at a detailed scene and retry".into(),
-                ));
-            };
-            if samples.len() < 2 || tilt_direction == 0 {
+            if samples.len() < 2 {
                 return Err(Error::Device(
                     "Too few zoom levels could be measured. Point the camera at a detailed scene and retry".into(),
                 ));
@@ -310,8 +327,8 @@ impl Controller {
                 tilt_units_per_degree: tilt_units,
                 pan_direction,
                 tilt_direction,
-                frame_width: frame_size.0 as u32,
-                frame_height: frame_size.1 as u32,
+                frame_width: a.width as u32,
+                frame_height: a.height as u32,
                 focal: samples,
             })
         }
@@ -325,6 +342,7 @@ impl Controller {
         &self,
         camera: &Camera,
         calibration: &CameraCalibration,
+        zoom: u16,
         run_id: &str,
         token: &CancellationToken,
     ) -> Result<(PanoramaInfo, Vec<u8>, PtzRange)> {
@@ -332,14 +350,14 @@ impl Controller {
         let start = self.observe(&camera.device.id).await?;
         let mut grid = vec![];
         let result = async {
-            self.camera_move(camera, Command::Zoom { position: 0 }, token)
+            self.camera_move(camera, Command::Zoom { position: zoom }, token)
                 .await?;
             let known = if camera.device.ptz_range.is_some() {
                 camera.range
             } else {
                 self.find_limits(camera, calibration, &start, token).await?
             };
-            grid = scan_grid(&known, calibration);
+            grid = scan_grid(&known, calibration, zoom);
             self.set_total(run_id, grid.len() + 2).await;
             let mut tiles = vec![];
             // The configured range can exceed what the camera allows (this
@@ -347,7 +365,7 @@ impl Controller {
             // reveal the real limits, and grid points beyond them are skipped.
             let mut reach = known;
             let mut captured: Vec<(i16, i16)> = vec![];
-            let (view_pan, view_tilt) = calibration.view_units(0);
+            let (view_pan, view_tilt) = calibration.view_units(zoom);
             for (index, (pan, tilt)) in grid.iter().enumerate() {
                 let target = (
                     (*pan).clamp(reach.pan_min, reach.pan_max),
@@ -372,7 +390,13 @@ impl Controller {
                 // Frames are scaled to the calibrated width, so focal lengths apply.
                 let focal_px = calibration.focal_at(at.zoom) * image.width as f32
                     / calibration.frame_width as f32;
-                let (yaw, pitch) = view_angles(calibration, f32::from(at.pan), f32::from(at.tilt));
+                // Zoomed in, the picture centre drifts from the reported position.
+                let (shift_pan, shift_tilt) = calibration.centre_offset(at.zoom);
+                let (yaw, pitch) = view_angles(
+                    calibration,
+                    f32::from(at.pan) + shift_pan,
+                    f32::from(at.tilt) + shift_tilt,
+                );
                 tiles.push(Tile {
                     image,
                     yaw,
@@ -388,7 +412,7 @@ impl Controller {
         self.restore(camera, &start).await?;
         let (tiles, reach) = result?;
         self.progress(run_id, grid.len() + 1).await;
-        let (extent, pixels_per_degree) = panorama_extent(calibration, &tiles);
+        let (extent, pixels_per_degree) = panorama_extent(calibration, &tiles, zoom);
         let tile_count = tiles.len() as u32;
         let image = tokio::task::spawn_blocking(move || stitch(&tiles, extent, pixels_per_degree))
             .await
@@ -610,10 +634,10 @@ fn units_at(calibration: &CameraCalibration, yaw: f32, pitch: f32) -> (f32, f32)
     )
 }
 
-/// Camera centre positions covering the whole range at the widest zoom,
-/// in a back-and-forth order that keeps moves short.
-fn scan_grid(range: &PtzRange, calibration: &CameraCalibration) -> Vec<(i16, i16)> {
-    let (view_pan, view_tilt) = calibration.view_units(0);
+/// Camera centre positions covering the whole range at `zoom`, in a
+/// back-and-forth order that keeps moves short.
+fn scan_grid(range: &PtzRange, calibration: &CameraCalibration, zoom: u16) -> Vec<(i16, i16)> {
+    let (view_pan, view_tilt) = calibration.view_units(zoom);
     let axis = |min: i16, max: i16, view: f32| {
         // In f32: the default ±32767 range spans more than i16 can hold.
         let span = f32::from(max) - f32::from(min);
@@ -670,10 +694,29 @@ fn discover_limit(min: &mut i16, max: &mut i16, target: i16, landed: i16) {
     }
 }
 
+/// The zoom a scan uses: the widest for a fast scan, or about twice the
+/// magnification for a detailed one (the smallest zoom reaching it).
+fn scan_zoom(calibration: &CameraCalibration, detail: ScanDetail, zoom_limit: u16) -> u16 {
+    if detail == ScanDetail::Fast {
+        return 0;
+    }
+    let goal = calibration.focal_at(0) * 2.0;
+    let (mut low, mut high) = (0u16, zoom_limit);
+    while low < high {
+        let middle = low + (high - low) / 2;
+        if calibration.focal_at(middle) >= goal {
+            high = middle;
+        } else {
+            low = middle + 1;
+        }
+    }
+    low
+}
+
 /// The angular area the captured tiles cover (their centres plus half a
 /// frame on each side) and its resolution, capped to a manageable image size.
-fn panorama_extent(calibration: &CameraCalibration, tiles: &[Tile]) -> (Extent, f32) {
-    let (view_pan, view_tilt) = calibration.view_units(0);
+fn panorama_extent(calibration: &CameraCalibration, tiles: &[Tile], zoom: u16) -> (Extent, f32) {
+    let (view_pan, view_tilt) = calibration.view_units(zoom);
     let half_yaw = view_pan / calibration.pan_units_per_degree / 2.0;
     let half_pitch = view_tilt / calibration.tilt_units_per_degree / 2.0;
     let bound = |f: fn(&Tile) -> f32, pick: fn(f32, f32) -> f32, start: f32| {
@@ -685,7 +728,8 @@ fn panorama_extent(calibration: &CameraCalibration, tiles: &[Tile]) -> (Extent, 
         top: (bound(|t| t.pitch, f32::max, f32::MIN) + half_pitch).min(90.0),
         bottom: (bound(|t| t.pitch, f32::min, f32::MAX) - half_pitch).max(-90.0),
     };
-    let native = calibration.focal_at(0) * std::f32::consts::PI / 180.0;
+    // The frames' own resolution, so a detailed scan yields a sharper image.
+    let native = calibration.focal_at(zoom) * std::f32::consts::PI / 180.0;
     let pixels_per_degree = native
         .min(PANORAMA_MAX_WIDTH / (extent.right - extent.left))
         .min(PANORAMA_MAX_HEIGHT / (extent.top - extent.bottom));
@@ -738,10 +782,14 @@ mod tests {
                 FocalSample {
                     zoom: 0,
                     focal_px: 831.0,
+                    centre_x: 0.0,
+                    centre_y: 0.0,
                 },
                 FocalSample {
                     zoom: 16384,
                     focal_px: 8310.0,
+                    centre_x: 0.0,
+                    centre_y: 0.0,
                 },
             ],
         };
@@ -751,7 +799,7 @@ mod tests {
     #[test]
     fn scan_grid_overlaps_neighbouring_frames_and_snakes() {
         let (camera, calibration) = p100();
-        let grid = scan_grid(&camera.range, &calibration);
+        let grid = scan_grid(&camera.range, &calibration, 0);
         let (view_pan, view_tilt) = calibration.view_units(0);
         let pans: Vec<_> = grid
             .iter()
@@ -775,6 +823,25 @@ mod tests {
     }
 
     #[test]
+    fn detailed_scans_zoom_to_twice_the_magnification() {
+        let (camera, calibration) = p100();
+        assert_eq!(scan_zoom(&calibration, ScanDetail::Fast, 16384), 0);
+        let zoom = scan_zoom(&calibration, ScanDetail::Detailed, 16384);
+        let magnification = calibration.focal_at(zoom) / calibration.focal_at(0);
+        assert!(
+            (magnification - 2.0).abs() < 0.01,
+            "{zoom}: {magnification}"
+        );
+        // About four times the frames of a fast scan.
+        let fast = scan_grid(&camera.range, &calibration, 0).len();
+        let detailed = scan_grid(&camera.range, &calibration, zoom).len();
+        assert!(
+            detailed > fast * 3 && detailed < fast * 5,
+            "{fast} → {detailed}"
+        );
+    }
+
+    #[test]
     fn panorama_extent_covers_captured_tiles_plus_half_a_frame() {
         let (_, calibration) = p100();
         let tile = |yaw, pitch| Tile {
@@ -784,7 +851,7 @@ mod tests {
             focal_px: 556.0,
         };
         let tiles = [tile(-175.0, -30.0), tile(175.0, 29.0)];
-        let (extent, pixels_per_degree) = panorama_extent(&calibration, &tiles);
+        let (extent, pixels_per_degree) = panorama_extent(&calibration, &tiles, 0);
         // Half the ~60°×36° wide view beyond the outermost tiles.
         assert!((extent.left + 205.0).abs() < 1.0 && (extent.right - 205.0).abs() < 1.0);
         assert!((extent.top - 47.0).abs() < 1.0 && (extent.bottom + 48.0).abs() < 1.0);
@@ -805,6 +872,36 @@ mod tests {
         assert_eq!((min, max), (-200, 372));
     }
 
+    #[tokio::test]
+    async fn panoramas_survive_a_restart() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("control.sqlite3");
+        let info = PanoramaInfo {
+            device_id: "demo-camera".into(),
+            width: 2,
+            height: 1,
+            pan_left: -10.0,
+            pan_right: 10.0,
+            tilt_top: 5.0,
+            tilt_bottom: -5.0,
+            tiles: 1,
+            created_at: 42,
+        };
+        {
+            let app = Controller::open(&path).await.unwrap();
+            app.store_panorama(info.clone(), vec![0xff, 0xd8, 1])
+                .await
+                .unwrap();
+            app.shutdown().await;
+        }
+        let app = Controller::open(&path).await.unwrap();
+        assert_eq!(app.snapshot().await.panoramas, vec![info]);
+        assert_eq!(
+            app.panorama_jpeg("demo-camera").await.unwrap(),
+            Some(vec![0xff, 0xd8, 1])
+        );
+    }
+
     #[test]
     fn default_profile_limits_do_not_overflow() {
         // The default VISCA profile is ±32767, which spans more than i16 holds.
@@ -817,8 +914,8 @@ mod tests {
         };
         let capped = physical_range(&huge, &calibration);
         assert_eq!((capped.pan_max, capped.tilt_min), (2331, -1179));
-        assert!(scan_grid(&capped, &calibration).len() < 100);
-        assert!(!scan_grid(&huge, &calibration).is_empty());
+        assert!(scan_grid(&capped, &calibration, 0).len() < 100);
+        assert!(!scan_grid(&huge, &calibration, 0).is_empty());
         let (mut min, mut max) = (-32767, 32767);
         discover_limit(&mut min, &mut max, 32767, 2216);
         discover_limit(&mut min, &mut max, -32767, -2216);

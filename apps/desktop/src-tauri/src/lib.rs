@@ -123,9 +123,13 @@ async fn calibrate_camera(app: App<'_>, device_id: String) -> std::result::Resul
         .map_err(|e| e.to_string())
 }
 #[tauri::command]
-async fn scan_camera(app: App<'_>, device_id: String) -> std::result::Result<String, String> {
+async fn scan_camera(
+    app: App<'_>,
+    device_id: String,
+    detail: Option<ScanDetail>,
+) -> std::result::Result<String, String> {
     app.inner()
-        .scan_camera(&device_id)
+        .scan_camera(&device_id, detail.unwrap_or_default())
         .await
         .map_err(|e| e.to_string())
 }

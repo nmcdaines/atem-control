@@ -199,6 +199,13 @@ pub struct CameraCalibration {
 pub struct FocalSample {
     pub zoom: u16,
     pub focal_px: f32,
+    /// Where this zoom's picture centre lies in the widest zoom's picture,
+    /// relative to its centre, in calibration pixels at the widest zoom
+    /// (right and down positive). Lenses drift slightly as they zoom.
+    #[serde(default)]
+    pub centre_x: f32,
+    #[serde(default)]
+    pub centre_y: f32,
 }
 impl CameraCalibration {
     /// Focal length at `zoom`, interpolating between samples.
@@ -220,6 +227,32 @@ impl CameraCalibration {
         }
         samples.last().unwrap().focal_px
     }
+    /// Where the picture centre points at `zoom`, relative to the reported
+    /// pan/tilt, in raw units (zero at the widest zoom by definition).
+    pub fn centre_offset(&self, zoom: u16) -> (f32, f32) {
+        let samples = &self.focal;
+        let (x, y) = match samples.iter().position(|s| s.zoom >= zoom) {
+            None => samples
+                .last()
+                .map_or((0.0, 0.0), |s| (s.centre_x, s.centre_y)),
+            Some(0) => (samples[0].centre_x, samples[0].centre_y),
+            Some(i) => {
+                let (a, b) = (samples[i - 1], samples[i]);
+                let t = f32::from(zoom - a.zoom) / f32::from(b.zoom - a.zoom).max(1.0);
+                (
+                    a.centre_x + (b.centre_x - a.centre_x) * t,
+                    a.centre_y + (b.centre_y - a.centre_y) * t,
+                )
+            }
+        };
+        let wide = self.focal.first().map_or(f32::NAN, |s| s.focal_px);
+        let right = (x / wide).atan().to_degrees();
+        let up = (-y / wide).atan().to_degrees();
+        (
+            right * self.pan_units_per_degree * f32::from(self.pan_direction),
+            up * self.tilt_units_per_degree * f32::from(self.tilt_direction),
+        )
+    }
     /// Visible frame width and height in raw pan/tilt units at `zoom`.
     pub fn view_units(&self, zoom: u16) -> (f32, f32) {
         let focal = self.focal_at(zoom);
@@ -240,7 +273,10 @@ impl CameraCalibration {
             && self.frame_height > 0
             && !self.focal.is_empty()
             && self.focal.len() <= 64
-            && self.focal.iter().all(|s| finite(s.focal_px))
+            && self
+                .focal
+                .iter()
+                .all(|s| finite(s.focal_px) && s.centre_x.is_finite() && s.centre_y.is_finite())
             && self.focal.windows(2).all(|w| w[0].zoom < w[1].zoom)
     }
 }
@@ -272,16 +308,20 @@ impl Device {
             let (w, h) = c.view_units(zoom);
             (w / 2.0, h / 2.0)
         });
-        let inside = |centre: i16, half: f32, min: i16, max: i16| {
-            f32::from(centre) - half >= f32::from(min) - 0.5
-                && f32::from(centre) + half <= f32::from(max) + 0.5
+        // The picture centre can drift from the reported position as it zooms.
+        let (shift_pan, shift_tilt) = self
+            .calibration
+            .as_ref()
+            .map_or((0.0, 0.0), |c| c.centre_offset(zoom));
+        let inside = |centre: f32, half: f32, min: i16, max: i16| {
+            centre - half >= f32::from(min) - 0.5 && centre + half <= f32::from(max) + 0.5
         };
+        let (pan, tilt) = (f32::from(pan) + shift_pan, f32::from(tilt) + shift_tilt);
         let in_rect = self.soft_limits.is_none_or(|limits| {
             inside(pan, half_pan, limits.pan_min, limits.pan_max)
                 && inside(tilt, half_tilt, limits.tilt_min, limits.tilt_max)
         });
         let in_polygon = self.soft_polygon.as_ref().is_none_or(|points| {
-            let (pan, tilt) = (f32::from(pan), f32::from(tilt));
             let polygon: Vec<_> = points
                 .iter()
                 .map(|p| (f32::from(p.pan), f32::from(p.tilt)))
@@ -302,6 +342,18 @@ impl Device {
             invalid("That shot would show outside the camera's soft limits")
         }
     }
+}
+
+/// How thoroughly a panorama scan covers the room.
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum ScanDetail {
+    /// At the widest zoom: quickest, softest.
+    #[default]
+    Fast,
+    /// Zoomed in to about twice the magnification: roughly four times the
+    /// frames and twice the sharpness.
+    Detailed,
 }
 
 /// A stored panorama: an equirectangular image whose x axis runs left to
@@ -892,10 +944,14 @@ mod tests {
                 FocalSample {
                     zoom: 0,
                     focal_px: 320.0,
+                    centre_x: 0.0,
+                    centre_y: 0.0,
                 },
                 FocalSample {
                     zoom: 16384,
                     focal_px: 3200.0,
+                    centre_x: 0.0,
+                    centre_y: 0.0,
                 },
             ],
         });
