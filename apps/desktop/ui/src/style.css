@@ -1,0 +1,456 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+:root {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  font-size: 14px;
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.985 0 0);
+}
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.185 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --sidebar: oklch(0.165 0 0);
+}
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply m-0 bg-background text-foreground antialiased;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  h1 {
+    @apply my-2 text-3xl font-semibold tracking-tight;
+  }
+  h2 {
+    @apply mb-3 text-lg font-semibold tracking-tight;
+  }
+  h3 {
+    @apply mb-2 text-base font-medium;
+  }
+  p {
+    @apply leading-relaxed text-muted-foreground;
+  }
+  small {
+    @apply text-xs;
+  }
+}
+@layer components {
+  .app {
+    @apply flex min-h-screen;
+  }
+  .sidebar {
+    @apply fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r bg-sidebar px-4 py-7;
+  }
+  .brand {
+    @apply flex items-center gap-3 text-base font-semibold tracking-wide;
+  }
+  .brand-mark {
+    @apply size-6 text-foreground;
+  }
+  .brand-light {
+    @apply text-[10px] font-normal tracking-widest text-muted-foreground;
+  }
+  .nav-caption {
+    @apply mx-3 mt-12 mb-4 text-[9px] font-medium tracking-widest text-muted-foreground;
+  }
+  .sidebar nav {
+    @apply grid gap-1.5;
+  }
+  .sidebar-bottom {
+    @apply mt-auto px-2 pt-7;
+  }
+  .sidebar-bottom p {
+    @apply mt-3 mb-1 text-xs;
+  }
+  .sidebar-bottom small {
+    @apply text-[10px] text-muted-foreground;
+  }
+  main {
+    @apply ml-60 max-w-[1600px] flex-1 px-10 pt-9 pb-16;
+    width: calc(100% - 15rem);
+  }
+  main > header {
+    @apply mb-8 flex items-center justify-between gap-4;
+  }
+  main > header p {
+    @apply mb-0 text-sm;
+  }
+  .eyebrow {
+    @apply text-[10px] font-medium tracking-widest text-muted-foreground;
+  }
+  .header-meta {
+    @apply flex flex-col items-end gap-3 text-xs text-muted-foreground;
+  }
+  .chip {
+    @apply rounded-md text-[9px] tracking-widest;
+  }
+  .panel {
+    @apply mb-6;
+  }
+  .panel-heading h2 {
+    @apply mt-1 mb-0;
+  }
+  .status {
+    @apply shrink-0 gap-2 text-[9px] tracking-wider;
+  }
+  .status i {
+    @apply size-1.5 rounded-full bg-muted-foreground;
+  }
+  .status.connected i {
+    @apply bg-emerald-400;
+  }
+  .status.error i {
+    @apply bg-rose-400;
+  }
+  .bus-label {
+    @apply mt-6 mb-3 flex items-center gap-2 text-[10px] font-semibold tracking-widest text-rose-200;
+  }
+  .bus-label > span:last-child {
+    @apply ml-auto text-[9px] font-normal text-muted-foreground;
+  }
+  .on-air-dot,
+  .bus-label i {
+    @apply block size-1.5 rounded-full bg-rose-400;
+  }
+  .preview-label {
+    @apply text-emerald-200;
+  }
+  .preview-label i {
+    @apply bg-emerald-400;
+  }
+  .input-row {
+    @apply grid grid-cols-5 gap-2.5;
+  }
+  .input-button span {
+    @apply text-[10px] opacity-70;
+  }
+  .input-button strong {
+    @apply text-sm font-medium;
+    overflow-wrap: anywhere;
+  }
+  .transition-bar {
+    @apply mt-6 flex items-center gap-3 border-t pt-5;
+  }
+  .transition-bar p {
+    @apply mr-auto mb-0 text-xs text-foreground;
+  }
+  .transition-bar small {
+    @apply mt-1 block text-[10px] text-muted-foreground;
+  }
+  .cut,
+  .auto {
+    @apply min-w-24 tracking-widest;
+  }
+  .section-heading {
+    @apply mt-6 mb-4 flex items-center justify-between gap-4;
+  }
+  .section-heading h2 {
+    @apply mb-0;
+  }
+  .section-heading > span {
+    @apply text-[9px] tracking-widest text-muted-foreground;
+  }
+  .cue-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  }
+  .cue-icon {
+    @apply mb-1 rounded-md bg-secondary p-2 text-muted-foreground;
+  }
+  .cue > strong,
+  .cue h3 {
+    @apply text-sm font-medium;
+  }
+  .cue > span:last-of-type {
+    @apply text-xs text-muted-foreground;
+  }
+  .cue p {
+    @apply m-0 text-xs font-normal leading-relaxed text-muted-foreground;
+  }
+  .cue .button-row {
+    @apply mt-auto pt-3;
+  }
+  .button-row {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .muted {
+    @apply text-xs text-muted-foreground;
+  }
+  .welcome {
+    @apply mb-6 flex items-center justify-between gap-5 rounded-xl border bg-card p-5;
+  }
+  .welcome p {
+    @apply mt-2 mb-0 text-xs;
+  }
+  .running {
+    @apply sticky top-3 z-10 mb-5 flex flex-wrap items-center gap-4 rounded-lg border bg-card p-4 shadow-lg;
+  }
+  .running > span {
+    @apply text-xs text-muted-foreground;
+  }
+  .running button {
+    @apply ml-auto;
+  }
+  .pulse {
+    @apply size-2 rounded-full bg-emerald-400 motion-safe:animate-pulse;
+  }
+  .empty {
+    @apply mb-6 rounded-xl border border-dashed px-6 py-12 text-center;
+  }
+  .empty h2 {
+    @apply mt-5;
+  }
+  .empty p {
+    @apply mx-auto mb-0 max-w-lg text-sm;
+  }
+  .empty-icon {
+    @apply text-3xl text-muted-foreground;
+  }
+  .fields {
+    @apply grid gap-3;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  }
+  .settings-grid {
+    @apply grid grid-cols-[1.5fr_1fr] gap-7;
+  }
+  .details {
+    @apply mt-5 border-t pt-4;
+  }
+  details summary {
+    @apply cursor-pointer text-xs text-muted-foreground;
+  }
+  .camera-grid {
+    @apply grid gap-5;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  }
+  .position-display {
+    @apply grid grid-cols-3 gap-2.5;
+  }
+  .position-display div {
+    @apply rounded-lg border bg-background p-4;
+  }
+  .position-display span {
+    @apply text-[9px] tracking-widest text-muted-foreground;
+  }
+  .position-display strong {
+    @apply mt-2 block font-mono text-2xl font-normal;
+  }
+  .inline-form {
+    @apply my-4 flex items-end gap-3;
+  }
+  .inline-form > label {
+    @apply mb-0 flex-1;
+  }
+  .step {
+    @apply my-4 rounded-lg border bg-background p-5;
+  }
+  .step-heading {
+    @apply mb-4 flex items-center gap-3 text-xs;
+  }
+  .step-heading .button-row {
+    @apply ml-auto;
+  }
+  .step-number {
+    @apply rounded bg-secondary px-2 py-1 text-xs;
+  }
+  .parallel-action {
+    @apply my-4 border-l-2 border-muted pl-4 pb-4;
+  }
+  .push-right {
+    @apply ml-auto;
+  }
+  .shortcut-grid {
+    @apply grid grid-cols-4 gap-4;
+  }
+  .shortcut {
+    @apply rounded-xl border bg-card p-4;
+  }
+  .shortcut-trigger > span {
+    @apply text-muted-foreground;
+  }
+  .device-list {
+    @apply grid gap-4;
+  }
+  .device-card {
+    @apply flex-wrap items-center gap-5;
+  }
+  .device-card > div:nth-child(2) {
+    @apply flex-1;
+  }
+  .device-card h3 {
+    @apply mt-0 mb-1;
+  }
+  .device-card p {
+    @apply mb-0 text-xs;
+  }
+  .device-icon {
+    @apply rounded-lg bg-secondary p-3 text-2xl text-muted-foreground;
+  }
+  .device-list + .panel {
+    @apply mt-6;
+  }
+  .history {
+    @apply mt-9;
+  }
+  .history-row {
+    @apply flex flex-wrap items-center gap-4 border-b py-4 text-xs;
+  }
+  .history-row strong {
+    @apply mr-auto font-medium;
+  }
+  .history-row > span {
+    @apply text-xs text-muted-foreground;
+  }
+  .history-row .run-status {
+    @apply text-[9px] uppercase tracking-wider;
+  }
+  .error-text {
+    @apply m-0 w-full text-xs text-destructive;
+  }
+  .import-preview pre {
+    @apply max-h-96 overflow-auto rounded-md bg-background p-4 font-mono text-xs leading-relaxed;
+  }
+  .import-preview > button {
+    @apply mt-5;
+  }
+  .postgres-fields {
+    @apply m-0 min-w-0 border-0 p-0;
+  }
+}
+@media (max-width: 1100px) {
+  main {
+    @apply px-6;
+  }
+  .shortcut-grid {
+    @apply grid-cols-3;
+  }
+}
+@media (max-width: 760px) {
+  .app {
+    @apply block;
+  }
+  .sidebar {
+    @apply static w-full border-r-0 border-b p-4;
+  }
+  .brand {
+    @apply mb-4;
+  }
+  .nav-caption,
+  .sidebar-bottom {
+    @apply hidden;
+  }
+  .sidebar nav {
+    @apply flex overflow-x-auto;
+  }
+  main {
+    @apply m-0 w-full px-4 py-6;
+  }
+  .header-meta {
+    @apply hidden;
+  }
+  .input-row {
+    @apply gap-1.5;
+  }
+  .input-button strong {
+    @apply text-[10px];
+  }
+  .transition-bar {
+    @apply flex-wrap;
+  }
+  .transition-bar p {
+    @apply w-full;
+  }
+  .settings-grid,
+  .camera-grid {
+    @apply grid-cols-1;
+  }
+  .shortcut-grid {
+    @apply grid-cols-2;
+  }
+  .welcome {
+    @apply flex-col items-start;
+  }
+  .panel-heading {
+    @apply flex-wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

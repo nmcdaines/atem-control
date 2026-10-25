@@ -1,0 +1,78 @@
+name: Rust desktop migration
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  core-and-ui:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: import-test-only
+          POSTGRES_DB: nestjs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nestjs"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/desktop/ui/package-lock.json
+      - run: cargo fmt --all -- --check
+      - run: cargo test --locked
+      - run: cargo test --locked -p control-storage --test postgres -- --ignored
+        env:
+          ATEM_TEST_POSTGRES_URL: postgres://postgres:import-test-only@127.0.0.1:5432/nestjs
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo run --locked -p control-core --bin export-types
+      - run: git diff --exit-code -- apps/desktop/ui/src/bindings.ts
+      - run: npm ci
+        working-directory: apps/desktop/ui
+      - run: npm run build && npm test && npm run format:check
+        working-directory: apps/desktop/ui
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/desktop/ui
+      - run: npm run test:e2e
+        working-directory: apps/desktop/ui
+  native-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/desktop/ui/package-lock.json
+      - run: cargo test --locked
+      - run: npm ci
+        working-directory: apps/desktop/ui
+      - run: npm run tauri -- build --target ${{ matrix.target }} --no-bundle
+        working-directory: apps/desktop/ui

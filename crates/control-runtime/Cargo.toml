@@ -1,0 +1,18 @@
+[package]
+name = "control-runtime"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+control-core = { path = "../control-core" }
+control-storage = { path = "../control-storage" }
+tokio.workspace = true
+tokio-util.workspace = true
+uuid.workspace = true
+async-trait.workspace = true
+serde_json.workspace = true
+futures = "0.3"
+
+[dev-dependencies]
+tempfile = "3"

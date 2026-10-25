@@ -1,0 +1,19 @@
+[workspace]
+members = ["crates/control-core", "crates/control-storage", "crates/control-runtime", "crates/control-server", "apps/desktop/src-tauri"]
+default-members = ["crates/control-core", "crates/control-storage", "crates/control-runtime", "crates/control-server"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["full", "test-util"] }
+tokio-util = "0.7"
+uuid = { version = "1", features = ["v4", "serde"] }
+async-trait = "0.1"
+ts-rs = { version = "12", features = ["serde-compat", "no-serde-warnings"] }

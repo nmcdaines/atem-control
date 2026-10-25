@@ -1,0 +1,19 @@
+[package]
+name = "atem-control-desktop"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+name = "atem_control_desktop"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+control-core = { path = "../../../crates/control-core" }
+control-runtime = { path = "../../../crates/control-runtime" }
+control-storage = { path = "../../../crates/control-storage" }
+serde_json.workspace = true

@@ -1,0 +1,14 @@
+[package]
+name = "control-server"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+control-core = { path = "../control-core" }
+control-runtime = { path = "../control-runtime" }
+control-storage = { path = "../control-storage" }
+axum = "0.8"
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
