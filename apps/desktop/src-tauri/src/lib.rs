@@ -76,7 +76,11 @@ pub fn run() {
             preview_legacy,
             preview_postgres,
             ndi_sources,
-            ndi_preview
+            ndi_preview,
+            device_state,
+            calibrate_camera,
+            scan_camera,
+            panorama
         ])
         .build(tauri::generate_context!())
         .expect("Unable to start ATEM Control");
@@ -104,6 +108,38 @@ async fn ndi_preview(
     Ok(tauri::ipc::Response::new(
         jpeg.map(|j| (*j).clone()).unwrap_or_default(),
     ))
+}
+#[tauri::command]
+async fn device_state(app: App<'_>, device_id: String) -> std::result::Result<DeviceState, String> {
+    app.device_state(&device_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+#[tauri::command]
+async fn calibrate_camera(app: App<'_>, device_id: String) -> std::result::Result<String, String> {
+    app.inner()
+        .calibrate_camera(&device_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+#[tauri::command]
+async fn scan_camera(app: App<'_>, device_id: String) -> std::result::Result<String, String> {
+    app.inner()
+        .scan_camera(&device_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+/// The stored panorama JPEG as raw bytes; empty when there is none.
+#[tauri::command]
+async fn panorama(
+    app: App<'_>,
+    device_id: String,
+) -> std::result::Result<tauri::ipc::Response, String> {
+    let jpeg = app
+        .panorama_jpeg(&device_id)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(tauri::ipc::Response::new(jpeg.unwrap_or_default()))
 }
 #[tauri::command]
 async fn preview_postgres(

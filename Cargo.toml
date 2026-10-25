@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/control-core", "crates/control-storage", "crates/control-runtime", "crates/control-server", "apps/desktop/src-tauri"]
-default-members = ["crates/control-core", "crates/control-storage", "crates/control-runtime", "crates/control-server"]
+members = ["crates/control-core", "crates/control-storage", "crates/control-vision", "crates/control-runtime", "crates/control-server", "apps/desktop/src-tauri"]
+default-members = ["crates/control-core", "crates/control-storage", "crates/control-vision", "crates/control-runtime", "crates/control-server"]
 resolver = "2"
 
 [workspace.package]
@@ -17,3 +17,7 @@ tokio-util = "0.7"
 uuid = { version = "1", features = ["v4", "serde"] }
 async-trait = "0.1"
 ts-rs = { version = "12", features = ["serde-compat", "no-serde-warnings"] }
+
+# Image matching and stitching are far too slow unoptimized, even in development.
+[profile.dev.package.control-vision]
+opt-level = 3

@@ -36,6 +36,8 @@ import { Notice } from "@/components/notice";
 import { Combobox } from "@/components/combobox";
 import { NdiSourceField } from "@/components/ndi-source-field";
 import { useNdiPreview } from "@/lib/use-ndi-preview";
+import { useLiveCamera, usePanorama } from "@/lib/use-camera-map";
+import { PtzMap } from "@/components/ptz-map";
 import { Status } from "@/components/status";
 import { DeviceDock, homeCamera } from "@/components/device-dock";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -50,6 +52,8 @@ import type {
   DeviceState,
   Macro,
   NdiSnapshot,
+  PanoramaInfo,
+  PtzRange,
   Snapshot,
   Step,
 } from "./bindings";
@@ -637,6 +641,8 @@ function Cameras({
             state={snapshot.devices.find((s) => s.device_id === device.id)}
             config={snapshot.config}
             ndi={snapshot.ndi}
+            panorama={snapshot.panoramas.find((p) => p.device_id === device.id)}
+            running={!!snapshot.runs.find((run) => run.status === "running")}
             disabled={disabled}
             task={task}
             save={save}
@@ -651,6 +657,8 @@ function Camera({
   state,
   config,
   ndi,
+  panorama,
+  running,
   disabled,
   task,
   save,
@@ -659,6 +667,8 @@ function Camera({
   state?: DeviceState;
   config: Config;
   ndi: NdiSnapshot;
+  panorama?: PanoramaInfo;
+  running: boolean;
   disabled: boolean;
   task: Task;
   save: Save;
@@ -686,6 +696,25 @@ function Camera({
     device.connection.type === "visca" ? device.connection.tilt_limit : 32767;
   const zl =
     device.connection.type === "visca" ? device.connection.zoom_limit : 16384;
+  const live = useLiveCamera(device.id, state);
+  const panoramaImage = usePanorama(device.id, panorama?.created_at);
+  const range = device.ptz_range ?? {
+    pan_min: -pl,
+    pan_max: pl,
+    tilt_min: -tl,
+    tilt_max: tl,
+  };
+  const saveLimits = (soft_limits: PtzRange | null) =>
+    void task(() =>
+      save({
+        ...config,
+        devices: config.devices.map((d) =>
+          d.id === device.id
+            ? { ...d, soft_limits: soft_limits ?? undefined }
+            : d,
+        ),
+      }),
+    );
   function preset(e: FormEvent) {
     e.preventDefault();
     if (!current) return;
@@ -726,17 +755,48 @@ function Camera({
         />
       </CardHeader>
       {state?.error && <Notice>{state.error}</Notice>}
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,1fr)]">
-        <div>
-          {" "}
-          <PtzPositionControl
+      {device.calibration && (
+        // A panorama is several times wider than tall, so the map gets the
+        // card's full width.
+        <div className="mb-6">
+          <PtzMap
+            calibration={device.calibration}
+            range={range}
+            panorama={panorama}
+            panoramaImage={panoramaImage}
+            observed={live.camera}
+            moving={live.moving}
             target={target}
-            observed={current}
-            limits={{ pan: pl, tilt: tl, zoom: zl }}
-            disabled={disabled}
             onChange={(position) => setTarget({ ...target, ...position })}
             preview={preview.frame}
+            limits={device.soft_limits}
+            onSaveLimits={saveLimits}
+            zoomLimit={zl}
+            disabled={disabled}
           />
+        </div>
+      )}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,1fr)]">
+        <div>
+          {!device.calibration && (
+            <PtzPositionControl
+              target={target}
+              observed={current}
+              limits={{ pan: pl, tilt: tl, zoom: zl }}
+              disabled={disabled}
+              onChange={(position) => setTarget({ ...target, ...position })}
+              preview={preview.frame}
+            />
+          )}
+          {device.connection.type === "visca" && device.ndi_source && (
+            <CameraSurvey
+              device={device}
+              panorama={panorama}
+              ndiAvailable={ndi.available}
+              disabled={disabled || running}
+              task={task}
+            />
+          )}
           {ndiSource && (
             <p className="muted mt-2" role="status">
               NDI® {ndiSource} ·{" "}
@@ -919,6 +979,79 @@ function Camera({
         </div>
       </div>
     </Card>
+  );
+}
+// Calibrate and scan move the camera for a while, so each asks to confirm.
+function CameraSurvey({
+  device,
+  panorama,
+  ndiAvailable,
+  disabled,
+  task,
+}: {
+  device: Device;
+  panorama?: PanoramaInfo;
+  ndiAvailable: boolean;
+  disabled: boolean;
+  task: Task;
+}) {
+  const [confirming, setConfirming] = useState<"calibrate" | "scan" | null>(
+    null,
+  );
+  const age = panorama
+    ? Math.max(0, Math.round((Date.now() / 1000 - panorama.created_at) / 60))
+    : null;
+  const start = (job: "calibrate" | "scan") => {
+    setConfirming(null);
+    void task(() =>
+      job === "calibrate" ? api.calibrate(device.id) : api.scan(device.id),
+    );
+  };
+  return (
+    <div className="mt-4 rounded-lg border p-4" aria-label="Panorama">
+      <p className="text-sm font-medium">Panorama map</p>
+      <p className="muted mt-1">
+        {!device.calibration
+          ? "Calibrate first: the camera zooms through its range, measuring its field of view, and then returns."
+          : panorama
+            ? `Scanned ${age === 0 ? "just now" : `${age} min ago`} from ${panorama.tiles} frames.`
+            : "Not scanned yet. A scan sweeps the camera's whole range (about 2 minutes) and then returns it."}
+        {!ndiAvailable && " Needs the NDI runtime."}
+      </p>
+      {confirming ? (
+        <div className="button-row mt-3">
+          <Button
+            variant="destructive"
+            disabled={disabled}
+            onClick={() => start(confirming)}
+          >
+            {confirming === "calibrate"
+              ? "Move camera to calibrate"
+              : "Move camera to scan"}
+          </Button>
+          <Button variant="outline" onClick={() => setConfirming(null)}>
+            Cancel
+          </Button>
+        </div>
+      ) : (
+        <div className="button-row mt-3">
+          <Button
+            variant="outline"
+            disabled={disabled || !ndiAvailable}
+            onClick={() => setConfirming("calibrate")}
+          >
+            {device.calibration ? "Recalibrate" : "Calibrate"}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={disabled || !ndiAvailable || !device.calibration}
+            onClick={() => setConfirming("scan")}
+          >
+            {panorama ? "Rescan panorama" : "Scan panorama"}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 function CommandFields({

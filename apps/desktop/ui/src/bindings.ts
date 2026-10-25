@@ -7,7 +7,20 @@ export type Device = { id: string, name: string, connection: Connection,
 /**
  * NDI® source name for a camera's preview feed, e.g. "CAMERA (Channel 1)".
  */
-ndi_source?: string, };
+ndi_source?: string, 
+/**
+ * Usable pan/tilt range in raw units, e.g. the P100's -394…1181 tilt.
+ * Defaults to the profile's symmetric limits.
+ */
+ptz_range?: PtzRange, 
+/**
+ * Measured optics, required for panoramas and visible-frame soft limits.
+ */
+calibration?: CameraCalibration, 
+/**
+ * Region (raw units) that the camera's visible frame must stay inside.
+ */
+soft_limits?: PtzRange, };
 export type Command = { "type": "set_program", input: number, } | { "type": "set_preview", input: number, } | { "type": "cut" } | { "type": "auto" } | { "type": "set_input_name", input: number, long_name: string, short_name: string, } | { "type": "set_pip", enabled: boolean, source: number, x: number, y: number, size: number, } | { "type": "pan_tilt", pan: number, tilt: number, pan_speed: number, tilt_speed: number, } | { "type": "zoom", position: number, } | { "type": "stop" } | { "type": "refresh" };
 export type Action = { device_id: string, command: Command, delay_ms: number, timeout_ms: number, };
 export type Step = { "type": "action", action: Action, } | { "type": "wait", duration_ms: number, } | { "type": "parallel", actions: Array<Action>, } | { "type": "legacy_parallel", actions: Array<Action>, };
@@ -23,6 +36,47 @@ export type Feedback = "simulated" | "observed" | "commanded" | "unknown";
 export type DeviceState = { device_id: string, status: ConnectionStatus, feedback: Feedback, error: string | null, switcher: SwitcherState | null, camera: CameraState | null, };
 export type RunStatus = "running" | "completed" | "cancelled" | "failed";
 export type Run = { id: string, macro_id: string, name: string, status: RunStatus, completed_steps: number, total_steps: number, error: string | null, };
+export type PtzRange = { pan_min: number, pan_max: number, tilt_min: number, tilt_max: number, };
+export type FocalSample = { zoom: number, focal_px: number, };
+export type CameraCalibration = { 
+/**
+ * Raw pan units per degree. Not measurable from images alone, so it comes
+ * from the camera model (BirdDog P100: 2266 / 175° ≈ 12.95).
+ */
+pan_units_per_degree: number, 
+/**
+ * Raw tilt units per degree, measured relative to pan.
+ */
+tilt_units_per_degree: number, 
+/**
+ * 1 if increasing pan moves the view right, -1 if left.
+ */
+pan_direction: number, 
+/**
+ * 1 if increasing tilt moves the view up, -1 if down.
+ */
+tilt_direction: number, 
+/**
+ * Frame size the focal lengths refer to.
+ */
+frame_width: number, frame_height: number, 
+/**
+ * Focal length in pixels at sampled zoom positions, ascending by zoom.
+ */
+focal: Array<FocalSample>, };
+export type PanoramaInfo = { device_id: string, width: number, height: number, 
+/**
+ * Pan at the image's left and right edges (left may be numerically larger).
+ */
+pan_left: number, pan_right: number, 
+/**
+ * Tilt at the image's top and bottom edges.
+ */
+tilt_top: number, tilt_bottom: number, tiles: number, 
+/**
+ * Unix seconds. JSON numbers hold these exactly, so TypeScript sees `number`.
+ */
+created_at: number, };
 export type NdiSource = { name: string, 
 /**
  * "ip:port" the sender advertises, when known.
@@ -42,4 +96,4 @@ available: boolean, error: string | null,
  * Receivers currently feeding a preview; idle previews are closed.
  */
 previews: Array<NdiPreview>, };
-export type Snapshot = { config: Config, devices: Array<DeviceState>, runs: Array<Run>, ndi: NdiSnapshot, };
+export type Snapshot = { config: Config, devices: Array<DeviceState>, runs: Array<Run>, ndi: NdiSnapshot, panoramas: Array<PanoramaInfo>, };

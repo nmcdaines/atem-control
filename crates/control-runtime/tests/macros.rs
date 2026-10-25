@@ -148,3 +148,59 @@ async fn parallel_group_waits_for_every_device_before_the_next_step() {
     assert_eq!(after.devices[0].switcher.as_ref().unwrap().program, 4);
     assert_eq!(after.devices[1].camera.as_ref().unwrap().zoom, 100);
 }
+
+#[tokio::test]
+async fn soft_limits_reject_manual_moves_and_macro_steps_before_sending() {
+    let (_dir, app) = app().await;
+    let mut config = demo_config();
+    let camera = config
+        .devices
+        .iter_mut()
+        .find(|d| d.id == "demo-camera")
+        .unwrap();
+    camera.soft_limits = Some(PtzRange {
+        pan_min: -100,
+        pan_max: 100,
+        tilt_min: -50,
+        tilt_max: 50,
+    });
+    app.save_config(config).await.unwrap();
+    let pan_tilt = |pan| Command::PanTilt {
+        pan,
+        tilt: 0,
+        pan_speed: 8,
+        tilt_speed: 8,
+    };
+    app.execute("demo-camera", pan_tilt(80)).await.unwrap();
+    let error = app.execute("demo-camera", pan_tilt(500)).await.unwrap_err();
+    assert!(error.to_string().contains("soft limits"), "{error}");
+    assert_eq!(camera_pan(&app).await, 80);
+
+    // The demo macro positions the camera; push its target out of bounds.
+    let mut config = app.snapshot().await.config;
+    for step in &mut config.macros[0].steps {
+        let actions = match step {
+            Step::Action { action } => std::slice::from_mut(action),
+            Step::Parallel { actions } | Step::LegacyParallel { actions } => actions,
+            Step::Wait { .. } => &mut [],
+        };
+        for action in actions {
+            if let Command::PanTilt { pan, .. } = &mut action.command {
+                *pan = 500;
+            }
+        }
+    }
+    app.save_config(config).await.unwrap();
+    app.run_macro("demo-shot").await.unwrap();
+    let run = finish(&app).await;
+    assert_eq!(run.status, RunStatus::Failed);
+    assert_eq!(camera_pan(&app).await, 80);
+}
+async fn camera_pan(app: &Controller) -> i16 {
+    let snapshot = app.snapshot().await;
+    let camera = snapshot
+        .devices
+        .iter()
+        .find(|d| d.device_id == "demo-camera");
+    camera.unwrap().camera.as_ref().unwrap().pan
+}

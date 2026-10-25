@@ -2,6 +2,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import type {
   Command,
   Config,
+  DeviceState,
   NdiSource,
   PostgresImportSettings,
   Snapshot,
@@ -58,6 +59,39 @@ export const api = {
     isTauri()
       ? invoke<ImportPreview>("preview_postgres", { settings })
       : request<ImportPreview>("postgres", settings),
+  // One device's state, cheap enough to poll quickly while a camera moves.
+  deviceState: (device_id: string) =>
+    isTauri()
+      ? invoke<DeviceState>("device_state", { deviceId: device_id })
+      : request<DeviceState>(`devices/${encodeURIComponent(device_id)}/state`),
+  calibrate: (device_id: string) =>
+    isTauri()
+      ? invoke<string>("calibrate_camera", { deviceId: device_id })
+      : request<string>(
+          `devices/${encodeURIComponent(device_id)}/calibrate`,
+          {},
+        ),
+  scan: (device_id: string) =>
+    isTauri()
+      ? invoke<string>("scan_camera", { deviceId: device_id })
+      : request<string>(`devices/${encodeURIComponent(device_id)}/scan`, {}),
+  // The stored panorama JPEG, or null if the camera has not been scanned.
+  panorama: async (device_id: string): Promise<Blob | null> => {
+    if (isTauri()) {
+      const bytes = await invoke<ArrayBuffer>("panorama", {
+        deviceId: device_id,
+      });
+      return bytes.byteLength
+        ? new Blob([bytes], { type: "image/jpeg" })
+        : null;
+    }
+    const response = await fetch(
+      `/api/devices/${encodeURIComponent(device_id)}/panorama`,
+    );
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(response.statusText);
+    return response.blob();
+  },
   ndiSources: () =>
     isTauri()
       ? invoke<NdiSource[]>("ndi_sources")

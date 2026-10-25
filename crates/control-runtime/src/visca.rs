@@ -34,6 +34,9 @@ pub struct Visca {
     epoch: AtomicU64,
     moving: AtomicBool,
 }
+/// How often position is read while a motion is in progress.
+const POLL_INTERVAL: Duration = Duration::from_millis(150);
+
 fn network(error: impl std::fmt::Display) -> Error {
     Error::Device(format!("VISCA: {error}"))
 }
@@ -171,18 +174,45 @@ impl Visca {
         // turn up on this socket, so the next command starts a fresh session.
         let mut reusable = true;
         let result = async {
-            if matches!(command, Command::PanTilt { .. } | Command::Zoom { .. }) {
+            let moving = matches!(command, Command::PanTilt { .. } | Command::Zoom { .. });
+            // Live samples during a move update one axis group, so start from
+            // a full observed position.
+            let known = {
+                let state = self.state.lock().await;
+                state
+                    .camera
+                    .clone()
+                    .filter(|_| state.feedback == Feedback::Observed)
+            };
+            let mut live = match known {
+                Some(camera) => Some(camera),
+                None if moving => Some(Self::observe(&mut session).await?),
+                None => None,
+            };
+            if moving {
                 self.moving.store(true, Ordering::SeqCst);
                 let mut state = self.state.lock().await;
+                // Commanded with a camera position means "moving; position is live".
                 state.feedback = Feedback::Commanded;
-                state.camera = None;
+                state.camera = live.clone();
             }
             for bytes in movement(command)? {
+                // Samples are published without awaiting inside the poll loop.
+                let publish = |camera: &CameraState| {
+                    if let Ok(mut state) = self.state.try_lock() {
+                        state.camera = Some(camera.clone());
+                    }
+                };
                 match command {
                     Command::PanTilt { pan, tilt, .. } => {
                         let target = [*pan as u16, *tilt as u16];
                         if !session
-                            .motion(&bytes, &[0x81, 9, 6, 0x12, 0xff], &target)
+                            .motion(&bytes, &[0x81, 9, 6, 0x12, 0xff], &target, |v| {
+                                if let Some(camera) = live.as_mut() {
+                                    (camera.pan, camera.tilt) = (v[0] as i16, v[1] as i16);
+                                    publish(camera);
+                                }
+                            })
                             .await?
                         {
                             reusable = false;
@@ -190,7 +220,12 @@ impl Visca {
                     }
                     Command::Zoom { position } => {
                         if !session
-                            .motion(&bytes, &[0x81, 9, 4, 0x47, 0xff], &[*position])
+                            .motion(&bytes, &[0x81, 9, 4, 0x47, 0xff], &[*position], |v| {
+                                if let Some(camera) = live.as_mut() {
+                                    camera.zoom = v[0];
+                                    publish(camera);
+                                }
+                            })
                             .await?
                         {
                             reusable = false;
@@ -202,21 +237,7 @@ impl Visca {
             if matches!(command, Command::Stop) {
                 self.moving.store(false, Ordering::SeqCst);
             }
-            if matches!(command, Command::PanTilt { .. } | Command::Zoom { .. }) {
-                let mut state = self.state.lock().await;
-                state.feedback = Feedback::Commanded;
-                state.camera = None;
-            }
-            let pan_tilt = session.inquire(&[0x81, 9, 6, 0x12, 0xff]).await?;
-            let zoom = session.inquire(&[0x81, 9, 4, 0x47, 0xff]).await?;
-            if pan_tilt.len() != 11 || zoom.len() != 7 {
-                return Err(network("Unexpected position inquiry response length"));
-            }
-            let camera = CameraState {
-                pan: position(&pan_tilt[2..6])? as i16,
-                tilt: position(&pan_tilt[6..10])? as i16,
-                zoom: position(&zoom[2..6])?,
-            };
+            let camera = Self::observe(&mut session).await?;
             let mut state = self.state.lock().await;
             state.status = ConnectionStatus::Connected;
             state.feedback = Feedback::Observed;
@@ -229,6 +250,20 @@ impl Visca {
             *guard = Some(session);
         }
         result
+    }
+}
+impl Visca {
+    async fn observe(session: &mut Session) -> Result<CameraState> {
+        let pan_tilt = session.inquire(&[0x81, 9, 6, 0x12, 0xff]).await?;
+        let zoom = session.inquire(&[0x81, 9, 4, 0x47, 0xff]).await?;
+        if pan_tilt.len() != 11 || zoom.len() != 7 {
+            return Err(network("Unexpected position inquiry response length"));
+        }
+        Ok(CameraState {
+            pan: position(&pan_tilt[2..6])? as i16,
+            tilt: position(&pan_tilt[6..10])? as i16,
+            zoom: position(&zoom[2..6])?,
+        })
     }
 }
 impl Session {
@@ -337,21 +372,30 @@ impl Session {
         }
         Ok(())
     }
-    /// Runs a motion command until it completes. Some cameras never send
-    /// completion for absolute moves, so after a grace period the observed
-    /// position is polled until it reaches `target` or stops changing.
+    /// Runs a motion command until it completes, polling the observed
+    /// position meanwhile and passing each sample to `sample`. Some cameras
+    /// (e.g. the BirdDog P100) never send completion for absolute moves, so
+    /// the motion also ends when the position reaches `target`, or stops
+    /// changing after it has moved (or after a second without moving).
     /// Returns false when completion was inferred from position, meaning a
     /// late completion may still arrive on this session.
-    async fn motion(&mut self, payload: &[u8], inquiry: &[u8], target: &[u16]) -> Result<bool> {
+    async fn motion(
+        &mut self,
+        payload: &[u8],
+        inquiry: &[u8],
+        target: &[u16],
+        mut sample: impl FnMut(&[u16]),
+    ) -> Result<bool> {
         let Some((sequence, socket)) = self.start(payload).await? else {
             return Ok(true);
         };
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(120);
-        let mut wait = Duration::from_secs(1);
+        let started = tokio::time::Instant::now();
+        let deadline = started + Duration::from_secs(120);
+        let mut first = None;
         let mut last = None;
         let mut unchanged = 0;
         loop {
-            if let Some(reply) = self.poll(sequence, wait).await? {
+            if let Some(reply) = self.poll(sequence, POLL_INTERVAL).await? {
                 Self::complete(&reply, socket)?;
                 return Ok(true);
             }
@@ -363,25 +407,48 @@ impl Session {
                 .chunks(4)
                 .map(position)
                 .collect::<Result<Vec<_>>>()?;
+            sample(&observed);
             if observed == target {
                 return Ok(false);
             }
+            let moved = first.get_or_insert_with(|| observed.clone()) != &observed;
             if last.as_ref() == Some(&observed) {
                 unchanged += 1;
-                if unchanged >= 4 {
+                if unchanged >= 3 && (moved || started.elapsed() > Duration::from_secs(1)) {
                     return Ok(false);
                 }
             } else {
                 unchanged = 0;
                 last = Some(observed);
             }
-            wait = Duration::from_millis(250);
         }
     }
     async fn inquire(&mut self, payload: &[u8]) -> Result<Vec<u8>> {
-        let sequence = self.send(payload, true).await?;
+        // Inquiries only read state, so a lost packet is retried. Sony framing
+        // tags replies with their sequence, so a late reply to an earlier try
+        // is ignored; raw framing can't tell replies apart and isn't retried.
+        let attempts = if self.framing == Framing::SonyUdp {
+            3
+        } else {
+            1
+        };
+        let mut sequence = self.send(payload, true).await?;
+        for _ in 1..attempts {
+            match self.poll(sequence, Duration::from_millis(500)).await? {
+                Some(reply) => return self.inquiry_reply(sequence, Some(reply)).await,
+                None => sequence = self.send(payload, true).await?,
+            }
+        }
+        self.inquiry_reply(sequence, None).await
+    }
+    /// Finishes an inquiry from an already-received reply, if any.
+    async fn inquiry_reply(&mut self, sequence: u32, first: Option<Vec<u8>>) -> Result<Vec<u8>> {
+        let mut pending = first;
         loop {
-            let reply = self.receive(sequence, Duration::from_secs(2)).await?;
+            let reply = match pending.take() {
+                Some(reply) => reply,
+                None => self.receive(sequence, Duration::from_secs(2)).await?,
+            };
             // Without Sony framing a late motion completion can arrive here;
             // inquiry replies always use socket 0 and carry data.
             if reply.len() == 3 && reply[1] & 0xf0 == 0x50 && reply[1] & 0x0f != 0 {
@@ -488,6 +555,9 @@ mod tests {
                 zoom_limit: 16384,
             },
             ndi_source: None,
+            ptz_range: None,
+            calibration: None,
+            soft_limits: None,
         }));
         let moving = adapter.clone();
         let motion = tokio::spawn(async move {
@@ -515,6 +585,15 @@ mod tests {
         let port = camera.local_addr().unwrap().port();
         let server = tokio::spawn(async move {
             let mut buffer = [0u8; 128];
+            // The first move reads the unknown start position.
+            for response in [
+                vec![0x90, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0xff],
+                vec![0x90, 0x50, 0, 0, 0, 0, 0xff],
+            ] {
+                let (_, peer) = camera.recv_from(&mut buffer).await.unwrap();
+                assert_eq!(buffer[1], 9, "expected an inquiry");
+                camera.send_to(&response, peer).await.unwrap();
+            }
             // Two consecutive moves; the camera ACKs each but never sends completion.
             for target in [[0, 0, 7, 8], [0, 0, 1, 2]] {
                 let (_, peer) = camera.recv_from(&mut buffer).await.unwrap();
@@ -541,6 +620,9 @@ mod tests {
                 zoom_limit: 16384,
             },
             ndi_source: None,
+            ptz_range: None,
+            calibration: None,
+            soft_limits: None,
         });
         for (pan, tilt) in [(0x78, 3), (0x12, 3)] {
             tokio::time::timeout(
@@ -560,6 +642,126 @@ mod tests {
                 Some(CameraState { pan, tilt, zoom: 0 })
             );
         }
+        server.await.unwrap();
+    }
+    #[tokio::test]
+    async fn snapshots_show_live_positions_while_moving() {
+        let camera = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let port = camera.local_addr().unwrap().port();
+        let pan_tilt = |pan: u8| vec![0x90, 0x50, 0, 0, pan >> 4, pan & 15, 0, 0, 0, 0, 0xff];
+        let server = tokio::spawn(async move {
+            let mut buffer = [0u8; 128];
+            let mut reply = async |response: Vec<u8>| {
+                let (_, peer) = camera.recv_from(&mut buffer).await.unwrap();
+                camera.send_to(&response, peer).await.unwrap();
+            };
+            // Start position, then ACK without completion, then a slow pan.
+            reply(pan_tilt(0)).await;
+            reply(vec![0x90, 0x50, 0, 0, 0, 0, 0xff]).await;
+            reply(vec![0x90, 0x41, 0xff]).await;
+            for pan in [10, 20, 30] {
+                reply(pan_tilt(pan)).await;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            reply(pan_tilt(30)).await;
+            reply(vec![0x90, 0x50, 0, 0, 0, 0, 0xff]).await;
+        });
+        let adapter = std::sync::Arc::new(Visca::new(Device {
+            id: "live".into(),
+            name: "Live samples".into(),
+            connection: Connection::Visca {
+                address: "127.0.0.1".into(),
+                port,
+                framing: Framing::RawUdp,
+                pan_limit: 32767,
+                tilt_limit: 32767,
+                zoom_limit: 16384,
+            },
+            ndi_source: None,
+            ptz_range: None,
+            calibration: None,
+            soft_limits: None,
+        }));
+        let moving = adapter.clone();
+        let motion = tokio::spawn(async move {
+            moving
+                .execute(&Command::PanTilt {
+                    pan: 30,
+                    tilt: 0,
+                    pan_speed: 8,
+                    tilt_speed: 8,
+                })
+                .await
+        });
+        let mut seen = vec![];
+        while !motion.is_finished() {
+            let state = adapter.snapshot().await;
+            if state.feedback == Feedback::Commanded
+                && let Some(camera) = state.camera
+                && seen.last() != Some(&camera.pan)
+            {
+                seen.push(camera.pan);
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        motion.await.unwrap().unwrap();
+        assert!(
+            seen.contains(&10) && seen.contains(&20),
+            "samples: {seen:?}"
+        );
+        assert_eq!(adapter.snapshot().await.feedback, Feedback::Observed);
+        server.await.unwrap();
+    }
+    #[tokio::test]
+    async fn sony_udp_retries_an_unanswered_inquiry() {
+        let camera = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let port = camera.local_addr().unwrap().port();
+        let server = tokio::spawn(async move {
+            let mut buffer = [0u8; 128];
+            let (_, peer) = camera.recv_from(&mut buffer).await.unwrap();
+            camera
+                .send_to(&[2, 1, 0, 1, 0, 0, 0, 0, 1], peer)
+                .await
+                .unwrap();
+            // Drop the first pan/tilt inquiry, as a lossy network would.
+            camera.recv_from(&mut buffer).await.unwrap();
+            for payload in [
+                vec![0x90, 0x50, 0, 0, 0, 5, 0, 0, 0, 6, 0xff],
+                vec![0x90, 0x50, 0, 0, 0, 7, 0xff],
+            ] {
+                let (_, peer) = camera.recv_from(&mut buffer).await.unwrap();
+                let mut response = vec![1, 0x11];
+                response.extend((payload.len() as u16).to_be_bytes());
+                response.extend(&buffer[4..8]);
+                response.extend(&payload);
+                camera.send_to(&response, peer).await.unwrap();
+            }
+        });
+        let adapter = Visca::new(Device {
+            id: "lossy".into(),
+            name: "Lossy network".into(),
+            connection: Connection::Visca {
+                address: "127.0.0.1".into(),
+                port,
+                framing: Framing::SonyUdp,
+                pan_limit: 32767,
+                tilt_limit: 32767,
+                zoom_limit: 16384,
+            },
+            ndi_source: None,
+            ptz_range: None,
+            calibration: None,
+            soft_limits: None,
+        });
+        adapter.execute(&Command::Refresh).await.unwrap();
+        assert_eq!(
+            adapter.snapshot().await.camera,
+            Some(CameraState {
+                pan: 5,
+                tilt: 6,
+                zoom: 7
+            })
+        );
         server.await.unwrap();
     }
     #[tokio::test]
@@ -588,6 +790,9 @@ mod tests {
                 zoom_limit: 16384,
             },
             ndi_source: None,
+            ptz_range: None,
+            calibration: None,
+            soft_limits: None,
         };
         let adapter = Visca::new(device);
         adapter.execute(&Command::Refresh).await.unwrap();
@@ -649,6 +854,9 @@ mod tests {
                 zoom_limit: 16384,
             },
             ndi_source: None,
+            ptz_range: None,
+            calibration: None,
+            soft_limits: None,
         });
         adapter.execute(&Command::Refresh).await.unwrap();
         assert_eq!(
@@ -668,6 +876,15 @@ mod tests {
         let port = listener.local_addr().unwrap().port();
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
+            // The move first reads the unknown start position.
+            for response in [
+                [0x90, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0xff].as_slice(),
+                &[0x90, 0x50, 0, 0, 0, 0, 0xff],
+            ] {
+                let mut query = [0u8; 5];
+                stream.read_exact(&mut query).await.unwrap();
+                stream.write_all(response).await.unwrap();
+            }
             let mut command = [0u8; 9];
             stream.read_exact(&mut command).await.unwrap();
             assert_eq!(command, [0x81, 1, 4, 0x47, 0, 1, 0, 0, 0xff]);
@@ -698,6 +915,9 @@ mod tests {
                 zoom_limit: 16384,
             },
             ndi_source: None,
+            ptz_range: None,
+            calibration: None,
+            soft_limits: None,
         });
         adapter
             .execute(&Command::Zoom { position: 256 })

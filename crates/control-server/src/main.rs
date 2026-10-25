@@ -128,6 +128,41 @@ async fn ndi_preview(
     })
 }
 
+async fn device_state(
+    State(app): App,
+    Path(device_id): Path<String>,
+) -> std::result::Result<Json<DeviceState>, ApiError> {
+    Ok(Json(app.device_state(&device_id).await?))
+}
+async fn calibrate(
+    State(app): App,
+    Path(device_id): Path<String>,
+) -> std::result::Result<Json<String>, ApiError> {
+    Ok(Json(app.calibrate_camera(&device_id).await?))
+}
+async fn scan(
+    State(app): App,
+    Path(device_id): Path<String>,
+) -> std::result::Result<Json<String>, ApiError> {
+    Ok(Json(app.scan_camera(&device_id).await?))
+}
+async fn panorama(
+    State(app): App,
+    Path(device_id): Path<String>,
+) -> std::result::Result<Response, ApiError> {
+    Ok(match app.panorama_jpeg(&device_id).await? {
+        Some(jpeg) => (
+            [
+                (header::CONTENT_TYPE, "image/jpeg"),
+                (header::CACHE_CONTROL, "no-cache"),
+            ],
+            jpeg,
+        )
+            .into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
+    })
+}
+
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let mut database = PathBuf::from(".local/control.sqlite3");
@@ -161,6 +196,10 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         .route("/api/postgres", post(postgres))
         .route("/api/ndi/sources", get(ndi_sources))
         .route("/api/ndi/preview/{device_id}", get(ndi_preview))
+        .route("/api/devices/{device_id}/state", get(device_state))
+        .route("/api/devices/{device_id}/calibrate", post(calibrate))
+        .route("/api/devices/{device_id}/scan", post(scan))
+        .route("/api/devices/{device_id}/panorama", get(panorama))
         .layer(DefaultBodyLimit::max(2 * 1024 * 1024))
         .with_state(controller.clone());
     let listener = tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await?;

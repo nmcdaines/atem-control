@@ -90,6 +90,164 @@ pub struct Device {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub ndi_source: Option<String>,
+    /// Usable pan/tilt range in raw units, e.g. the P100's -394…1181 tilt.
+    /// Defaults to the profile's symmetric limits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ptz_range: Option<PtzRange>,
+    /// Measured optics, required for panoramas and visible-frame soft limits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub calibration: Option<CameraCalibration>,
+    /// Region (raw units) that the camera's visible frame must stay inside.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub soft_limits: Option<PtzRange>,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, TS)]
+#[serde(deny_unknown_fields)]
+pub struct PtzRange {
+    pub pan_min: i16,
+    pub pan_max: i16,
+    pub tilt_min: i16,
+    pub tilt_max: i16,
+}
+impl PtzRange {
+    fn valid(&self) -> bool {
+        self.pan_min < self.pan_max && self.tilt_min < self.tilt_max
+    }
+}
+
+/// How camera units relate to the image, measured by panning/tilting a known
+/// amount and finding how far the picture shifts.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
+#[serde(deny_unknown_fields)]
+pub struct CameraCalibration {
+    /// Raw pan units per degree. Not measurable from images alone, so it comes
+    /// from the camera model (BirdDog P100: 2266 / 175° ≈ 12.95).
+    pub pan_units_per_degree: f32,
+    /// Raw tilt units per degree, measured relative to pan.
+    pub tilt_units_per_degree: f32,
+    /// 1 if increasing pan moves the view right, -1 if left.
+    pub pan_direction: i8,
+    /// 1 if increasing tilt moves the view up, -1 if down.
+    pub tilt_direction: i8,
+    /// Frame size the focal lengths refer to.
+    pub frame_width: u32,
+    pub frame_height: u32,
+    /// Focal length in pixels at sampled zoom positions, ascending by zoom.
+    pub focal: Vec<FocalSample>,
+}
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, TS)]
+#[serde(deny_unknown_fields)]
+pub struct FocalSample {
+    pub zoom: u16,
+    pub focal_px: f32,
+}
+impl CameraCalibration {
+    /// Focal length at `zoom`, interpolating between samples.
+    pub fn focal_at(&self, zoom: u16) -> f32 {
+        let samples = &self.focal;
+        let Some(first) = samples.first() else {
+            return f32::NAN;
+        };
+        if zoom <= first.zoom {
+            return first.focal_px;
+        }
+        for pair in samples.windows(2) {
+            let (a, b) = (pair[0], pair[1]);
+            if zoom <= b.zoom {
+                // Focal length grows roughly geometrically with zoom position.
+                let t = f32::from(zoom - a.zoom) / f32::from(b.zoom - a.zoom).max(1.0);
+                return a.focal_px * (b.focal_px / a.focal_px).powf(t);
+            }
+        }
+        samples.last().unwrap().focal_px
+    }
+    /// Visible frame width and height in raw pan/tilt units at `zoom`.
+    pub fn view_units(&self, zoom: u16) -> (f32, f32) {
+        let focal = self.focal_at(zoom);
+        let width = 2.0 * (self.frame_width as f32 / 2.0 / focal).atan().to_degrees();
+        let height = 2.0 * (self.frame_height as f32 / 2.0 / focal).atan().to_degrees();
+        (
+            width * self.pan_units_per_degree,
+            height * self.tilt_units_per_degree,
+        )
+    }
+    fn valid(&self) -> bool {
+        let finite = |v: f32| v.is_finite() && v > 0.0;
+        finite(self.pan_units_per_degree)
+            && finite(self.tilt_units_per_degree)
+            && matches!(self.pan_direction, -1 | 1)
+            && matches!(self.tilt_direction, -1 | 1)
+            && self.frame_width > 0
+            && self.frame_height > 0
+            && !self.focal.is_empty()
+            && self.focal.len() <= 64
+            && self.focal.iter().all(|s| finite(s.focal_px))
+            && self.focal.windows(2).all(|w| w[0].zoom < w[1].zoom)
+    }
+}
+
+impl Device {
+    /// Rejects a pan/tilt or zoom command whose visible frame would leave the
+    /// soft limits, given the camera's current position. Without calibration
+    /// only the frame centre is checked. An unknown current zoom is treated as
+    /// the widest, which is the largest frame.
+    pub fn check_soft_limits(
+        &self,
+        command: &Command,
+        current: Option<&CameraState>,
+    ) -> Result<()> {
+        let Some(limits) = self.soft_limits else {
+            return Ok(());
+        };
+        let (pan, tilt, zoom) = match (command, current) {
+            (Command::PanTilt { pan, tilt, .. }, current) => {
+                (*pan, *tilt, current.map_or(0, |c| c.zoom))
+            }
+            (Command::Zoom { position }, Some(current)) => (current.pan, current.tilt, *position),
+            (Command::Zoom { .. }, None) => {
+                return invalid("Read the camera position before zooming within soft limits");
+            }
+            _ => return Ok(()),
+        };
+        let (half_pan, half_tilt) = self.calibration.as_ref().map_or((0.0, 0.0), |c| {
+            let (w, h) = c.view_units(zoom);
+            (w / 2.0, h / 2.0)
+        });
+        let inside = |centre: i16, half: f32, min: i16, max: i16| {
+            f32::from(centre) - half >= f32::from(min) - 0.5
+                && f32::from(centre) + half <= f32::from(max) + 0.5
+        };
+        if inside(pan, half_pan, limits.pan_min, limits.pan_max)
+            && inside(tilt, half_tilt, limits.tilt_min, limits.tilt_max)
+        {
+            Ok(())
+        } else {
+            invalid("That shot would show outside the camera's soft limits")
+        }
+    }
+}
+
+/// A stored panorama: an equirectangular image whose x axis runs left to
+/// right across the view and y axis top to bottom, spanning these raw units.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
+pub struct PanoramaInfo {
+    pub device_id: String,
+    pub width: u32,
+    pub height: u32,
+    /// Pan at the image's left and right edges (left may be numerically larger).
+    pub pan_left: f32,
+    pub pan_right: f32,
+    /// Tilt at the image's top and bottom edges.
+    pub tilt_top: f32,
+    pub tilt_bottom: f32,
+    pub tiles: u32,
+    /// Unix seconds. JSON numbers hold these exactly, so TypeScript sees `number`.
+    #[ts(type = "number")]
+    pub created_at: u64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
@@ -301,6 +459,18 @@ impl Config {
             {
                 return invalid("NDI sources apply to cameras and must contain 1–256 characters");
             }
+            if device.ptz_range.is_some_and(|r| !r.valid())
+                || device.soft_limits.is_some_and(|r| !r.valid())
+                || device.calibration.as_ref().is_some_and(|c| !c.valid())
+                || ((device.ptz_range.is_some()
+                    || device.calibration.is_some()
+                    || device.soft_limits.is_some())
+                    && device.connection.kind() != DeviceKind::Camera)
+            {
+                return invalid(
+                    "Camera range, calibration and soft limits must be valid and apply to cameras only",
+                );
+            }
             if let Connection::Ndi { source } = &device.connection
                 && (source.trim().is_empty()
                     || source.len() > 256
@@ -402,6 +572,9 @@ pub fn demo_config() -> Config {
                     kind: DeviceKind::Atem,
                 },
                 ndi_source: None,
+                ptz_range: None,
+                calibration: None,
+                soft_limits: None,
             },
             Device {
                 id: "demo-camera".into(),
@@ -410,6 +583,9 @@ pub fn demo_config() -> Config {
                     kind: DeviceKind::Camera,
                 },
                 ndi_source: None,
+                ptz_range: None,
+                calibration: None,
+                soft_limits: None,
             },
         ],
         macros: vec![Macro {
@@ -562,6 +738,7 @@ pub struct Snapshot {
     pub devices: Vec<DeviceState>,
     pub runs: Vec<Run>,
     pub ndi: NdiSnapshot,
+    pub panoramas: Vec<PanoramaInfo>,
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, TS)]
 pub struct NdiSnapshot {
@@ -591,6 +768,70 @@ pub struct NdiPreview {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn soft_limits_keep_the_visible_frame_inside_the_region() {
+        let mut device = demo_config().devices.remove(1);
+        device.soft_limits = Some(PtzRange {
+            pan_min: -1000,
+            pan_max: 1000,
+            tilt_min: -300,
+            tilt_max: 300,
+        });
+        device.calibration = Some(CameraCalibration {
+            pan_units_per_degree: 10.0,
+            tilt_units_per_degree: 10.0,
+            pan_direction: 1,
+            tilt_direction: 1,
+            frame_width: 640,
+            frame_height: 360,
+            // 640 px at 320 px focal length: 90° wide and about 59° tall.
+            focal: vec![
+                FocalSample {
+                    zoom: 0,
+                    focal_px: 320.0,
+                },
+                FocalSample {
+                    zoom: 16384,
+                    focal_px: 3200.0,
+                },
+            ],
+        });
+        let at = |pan, tilt, zoom| CameraState { pan, tilt, zoom };
+        let pan_tilt = |pan, tilt| Command::PanTilt {
+            pan,
+            tilt,
+            pan_speed: 8,
+            tilt_speed: 8,
+        };
+        // Wide (900 × ~590 units): the centre must stay well inside.
+        assert!(
+            device
+                .check_soft_limits(&pan_tilt(0, 0), Some(&at(0, 0, 0)))
+                .is_ok()
+        );
+        assert!(
+            device
+                .check_soft_limits(&pan_tilt(600, 0), Some(&at(0, 0, 0)))
+                .is_err()
+        );
+        // Zoomed in, the same centre fits.
+        assert!(
+            device
+                .check_soft_limits(&pan_tilt(600, 0), Some(&at(0, 0, 16384)))
+                .is_ok()
+        );
+        // Zooming out there would show too much.
+        let zoom_out = Command::Zoom { position: 0 };
+        assert!(
+            device
+                .check_soft_limits(&zoom_out, Some(&at(600, 0, 16384)))
+                .is_err()
+        );
+        assert!(device.check_soft_limits(&zoom_out, None).is_err());
+        // Unknown zoom is treated as widest.
+        assert!(device.check_soft_limits(&pan_tilt(600, 0), None).is_err());
+        assert!(device.check_soft_limits(&Command::Stop, None).is_ok());
+    }
     #[test]
     fn rejects_wrong_device_ranges_and_dangling_shortcuts() {
         let mut config = demo_config();

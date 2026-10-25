@@ -1,6 +1,7 @@
 pub mod adapter;
 pub mod atem;
 pub mod ndi;
+mod panorama;
 pub mod visca;
 use adapter::{Adapter, Simulated};
 use control_core::*;
@@ -17,6 +18,8 @@ type Adapters = HashMap<String, Arc<dyn Adapter>>;
 enum StorageRequest {
     Save(Config, oneshot::Sender<Result<()>>),
     Backup(PathBuf, oneshot::Sender<Result<()>>),
+    SavePanorama(PanoramaInfo, Vec<u8>, oneshot::Sender<Result<()>>),
+    PanoramaJpeg(String, oneshot::Sender<Result<Option<Vec<u8>>>>),
 }
 
 /// UI-independent application service; the web development server and Tauri use
@@ -30,6 +33,7 @@ pub struct Controller {
     runs: Mutex<Vec<Run>>,
     database: PathBuf,
     ndi: Arc<ndi::Ndi>,
+    panoramas: RwLock<Vec<PanoramaInfo>>,
 }
 impl Controller {
     pub async fn open(path: impl AsRef<Path>) -> Result<Arc<Self>> {
@@ -40,7 +44,8 @@ impl Controller {
         tokio::task::spawn_blocking(move || {
             let opened = Store::open(&db_path).and_then(|store| {
                 let config = store.load()?;
-                Ok((store, config))
+                let panoramas = store.panoramas()?;
+                Ok((store, (config, panoramas)))
             });
             let (mut store, config) = match opened {
                 Ok(v) => v,
@@ -60,10 +65,16 @@ impl Controller {
                     StorageRequest::Backup(path, reply) => {
                         let _ = reply.send(store.backup(&path));
                     }
+                    StorageRequest::SavePanorama(info, jpeg, reply) => {
+                        let _ = reply.send(store.save_panorama(&info, &jpeg));
+                    }
+                    StorageRequest::PanoramaJpeg(device_id, reply) => {
+                        let _ = reply.send(store.panorama_jpeg(&device_id));
+                    }
                 }
             }
         });
-        let config = ready_rx
+        let (config, panoramas) = ready_rx
             .await
             .map_err(|e| Error::Storage(e.to_string()))??;
         let adapters = build_adapters(&config);
@@ -76,6 +87,7 @@ impl Controller {
             runs: Mutex::new(vec![]),
             database: path,
             ndi: Arc::default(),
+            panoramas: RwLock::new(panoramas),
         }))
     }
     pub async fn snapshot(&self) -> Snapshot {
@@ -92,6 +104,7 @@ impl Controller {
             devices,
             runs: self.runs.lock().await.clone(),
             ndi: self.ndi_snapshot(),
+            panoramas: self.panoramas.read().await.clone(),
         }
     }
     fn ndi_snapshot(&self) -> NdiSnapshot {
@@ -105,6 +118,17 @@ impl Controller {
                 vec![]
             },
         }
+    }
+    /// One device's live state, cheap enough to poll quickly during moves.
+    pub async fn device_state(&self, device_id: &str) -> Result<DeviceState> {
+        let adapter = self
+            .adapters
+            .read()
+            .await
+            .get(device_id)
+            .cloned()
+            .ok_or_else(|| Error::Invalid("Unknown device".into()))?;
+        Ok(adapter.snapshot().await)
     }
     /// NDI sources visible on the network.
     pub async fn ndi_sources(&self) -> Result<Vec<NdiSource>> {
@@ -138,6 +162,10 @@ impl Controller {
         if self.active.lock().await.is_some() {
             return Err(Error::Busy);
         }
+        self.save_config_unchecked(config).await
+    }
+    /// Saves without the operation gate, for jobs that record their results.
+    async fn save_config_unchecked(&self, config: Config) -> Result<()> {
         config.validate()?;
         let (tx, rx) = oneshot::channel();
         self.storage
@@ -150,7 +178,12 @@ impl Controller {
             let old_adapters = self.adapters.read().await;
             let mut next = HashMap::new();
             for device in &config.devices {
-                if old_config.devices.iter().any(|d| d == device)
+                // Calibration, limits and names don't affect the connection,
+                // so changing them keeps the live adapter and its state.
+                if old_config
+                    .devices
+                    .iter()
+                    .any(|d| d.id == device.id && d.connection == device.connection)
                     && let Some(adapter) = old_adapters.get(&device.id)
                 {
                     next.insert(device.id.clone(), adapter.clone());
@@ -208,7 +241,37 @@ impl Controller {
         if self.active.lock().await.is_some() {
             return Err(Error::Busy);
         }
-        tokio::time::timeout(std::time::Duration::from_secs(30), self.dispatch(device_id, &command)).await.map_err(|_| Error::Device("Command timed out; execution may have occurred. Check device state before retrying.".into()))?
+        tokio::time::timeout(std::time::Duration::from_secs(30), self.dispatch_limited(device_id, &command)).await.map_err(|_| Error::Device("Command timed out; execution may have occurred. Check device state before retrying.".into()))?
+    }
+    /// Dispatches a manual or macro command, refusing moves that would show
+    /// outside the camera's soft limits. Calibration and scans bypass this.
+    async fn dispatch_limited(&self, device_id: &str, command: &Command) -> Result<()> {
+        let device = self
+            .config
+            .read()
+            .await
+            .devices
+            .iter()
+            .find(|d| d.id == device_id)
+            .cloned();
+        if let Some(device) = device.filter(|d| d.soft_limits.is_some())
+            && matches!(command, Command::PanTilt { .. } | Command::Zoom { .. })
+        {
+            let adapter = self
+                .adapters
+                .read()
+                .await
+                .get(device_id)
+                .cloned()
+                .ok_or_else(|| Error::Device("Device adapter unavailable".into()))?;
+            let mut current = adapter.snapshot().await.camera;
+            if current.is_none() {
+                adapter.execute(&Command::Refresh).await?;
+                current = adapter.snapshot().await.camera;
+            }
+            device.check_soft_limits(command, current.as_ref())?;
+        }
+        self.dispatch(device_id, command).await
     }
     async fn dispatch(&self, device_id: &str, command: &Command) -> Result<()> {
         let config = self.config.read().await;
@@ -227,6 +290,70 @@ impl Controller {
             .ok_or_else(|| Error::Device("Device adapter unavailable".into()))?;
         drop(config);
         adapter.execute(command).await
+    }
+    /// Runs `work` as a cancellable job shown like a macro run. Like a macro,
+    /// it excludes other operations; Stop and Cancel cancel its token.
+    async fn start_job<F, Fut>(
+        self: &Arc<Self>,
+        name: String,
+        total_steps: usize,
+        work: F,
+    ) -> Result<String>
+    where
+        F: FnOnce(Arc<Self>, String, CancellationToken) -> Fut + Send + 'static,
+        Fut: std::future::Future<Output = Result<()>> + Send + 'static,
+    {
+        let _operation = self.operation.lock().await;
+        let mut active = self.active.lock().await;
+        if active.is_some() {
+            return Err(Error::Busy);
+        }
+        let id = uuid::Uuid::new_v4().to_string();
+        let token = CancellationToken::new();
+        *active = Some((id.clone(), token.clone()));
+        {
+            let mut runs = self.runs.lock().await;
+            runs.insert(
+                0,
+                Run {
+                    id: id.clone(),
+                    macro_id: String::new(),
+                    name,
+                    status: RunStatus::Running,
+                    completed_steps: 0,
+                    total_steps,
+                    error: None,
+                },
+            );
+            runs.truncate(20);
+        }
+        let controller = self.clone();
+        let run_id = id.clone();
+        tokio::spawn(async move {
+            let result = work(controller.clone(), run_id.clone(), token).await;
+            let mut active = controller.active.lock().await;
+            if let Some(run) = controller
+                .runs
+                .lock()
+                .await
+                .iter_mut()
+                .find(|r| r.id == run_id)
+            {
+                match result {
+                    Ok(()) => {
+                        run.status = RunStatus::Completed;
+                        run.completed_steps = run.total_steps;
+                    }
+                    Err(Error::Cancelled) => run.status = RunStatus::Cancelled,
+                    Err(e) => {
+                        run.status = RunStatus::Failed;
+                        run.error = Some(e.to_string());
+                    }
+                }
+            }
+            *active = None;
+        });
+        Ok(id)
     }
     pub async fn run_macro(self: &Arc<Self>, macro_id: &str) -> Result<String> {
         let _operation = self.operation.lock().await;
@@ -343,7 +470,7 @@ impl Controller {
         wait(action.delay_ms, token).await?;
         tokio::select! { biased;
             _ = token.cancelled() => Err(Error::Cancelled),
-            result = tokio::time::timeout(std::time::Duration::from_millis(action.timeout_ms.into()), self.dispatch(&action.device_id, &action.command)) => result.map_err(|_| Error::Device("Macro step timed out; the command may have executed".into()))?,
+            result = tokio::time::timeout(std::time::Duration::from_millis(action.timeout_ms.into()), self.dispatch_limited(&action.device_id, &action.command)) => result.map_err(|_| Error::Device("Macro step timed out; the command may have executed".into()))?,
         }
     }
     async fn run_steps(

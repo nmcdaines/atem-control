@@ -583,3 +583,99 @@ test("NDI preview draws inside the readback frame and explains a missing runtime
   // Frames keep being polled, which keeps the receiver connected.
   await expect.poll(() => previews).toBeGreaterThan(2);
 });
+
+test("calibrated camera map aims, draws soft limits and keeps targets inside them", async ({
+  page,
+  request,
+}) => {
+  // Give the simulated camera the BirdDog P100's measured calibration.
+  const config = structuredClone(baseline);
+  const camera = config.devices.find((d) => d.id === "demo-camera")!;
+  camera.calibration = {
+    pan_units_per_degree: 12.95,
+    tilt_units_per_degree: 12.57,
+    pan_direction: 1,
+    tilt_direction: 1,
+    frame_width: 640,
+    frame_height: 360,
+    focal: [
+      { zoom: 0, focal_px: 556.2 },
+      { zoom: 16384, focal_px: 5214.6 },
+    ],
+  };
+  camera.ptz_range = {
+    pan_min: -2216,
+    pan_max: 2216,
+    tilt_min: -394,
+    tilt_max: 372,
+  };
+  await request.post("http://127.0.0.1:3849/api/config", { data: config });
+  await page.reload();
+  await page.getByRole("button", { name: "Cameras", exact: true }).click();
+  const map = page.getByRole("img", { name: /^Camera map/ });
+  await expect(map).toBeVisible();
+  const box = (await map.boundingBox())!;
+  const target = async () => {
+    const label = (await map.getAttribute("aria-label"))!;
+    const [, pan, tilt] = label.match(/target pan (-?\d+), tilt (-?\d+)/)!;
+    return { pan: Number(pan), tilt: Number(tilt) };
+  };
+
+  // Clicking right of centre aims right, in whole camera units.
+  await map.click({ position: { x: box.width * 0.75, y: box.height / 2 } });
+  const aimed = await target();
+  expect(aimed.pan).toBeGreaterThan(1000);
+  expect(Number.isInteger(aimed.pan)).toBe(true);
+
+  // Draw limits around the middle third and save them.
+  await page.getByRole("button", { name: "Set limits" }).click();
+  await page.mouse.move(box.x + box.width / 3, box.y + box.height * 0.1);
+  await page.mouse.down();
+  await page.mouse.move(box.x + (box.width * 2) / 3, box.y + box.height * 0.9, {
+    steps: 6,
+  });
+  await page.mouse.up();
+  await page.getByRole("button", { name: "Save limits" }).click();
+  await expect(page.getByRole("button", { name: "Edit limits" })).toBeVisible();
+  const saved = async () =>
+    (
+      (await (
+        await request.get("http://127.0.0.1:3849/api/snapshot")
+      ).json()) as Snapshot
+    ).config.devices.find((d) => d.id === "demo-camera")!.soft_limits;
+  await expect.poll(saved).toBeTruthy();
+  const limits = (await saved())!;
+
+  // Aiming far outside holds the target's whole frame inside the limits.
+  // Earlier tests may leave the camera zoomed in; check at the widest zoom.
+  await page.getByRole("slider", { name: "Target zoom", exact: true }).focus();
+  await page.keyboard.press("Home");
+  await map.click({ position: { x: box.width * 0.95, y: box.height / 2 } });
+  const held = await target();
+  const halfWidth =
+    (((2 * Math.atan(320 / 556.2) * 180) / Math.PI) * 12.95) / 2;
+  expect(held.pan + halfWidth).toBeLessThanOrEqual(limits.pan_max + 1);
+  await page
+    .getByRole("button", { name: "Move to position", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+
+  // The core refuses out-of-bounds commands from any source.
+  const refused = await request.post("http://127.0.0.1:3849/api/execute", {
+    data: {
+      device_id: "demo-camera",
+      command: {
+        type: "pan_tilt",
+        pan: 2000,
+        tilt: 0,
+        pan_speed: 8,
+        tilt_speed: 8,
+      },
+    },
+  });
+  expect(refused.status()).toBe(400);
+  expect(await refused.text()).toContain("soft limits");
+
+  await page.getByRole("button", { name: "Clear limits" }).click();
+  await expect.poll(saved).toBeFalsy();
+});

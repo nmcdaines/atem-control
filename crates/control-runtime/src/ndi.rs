@@ -13,6 +13,7 @@ use control_core::{
     CameraState, Command, ConnectionStatus, DeviceState, Error, Feedback, NdiPreview, NdiSource,
     Result,
 };
+use control_vision::Rgb;
 use libloading::Library;
 use std::{
     collections::HashMap,
@@ -433,8 +434,8 @@ fn receive(api: &'static Api, source: CString, preview: Arc<Preview>) {
                     frame.line_stride_in_bytes as usize,
                 );
                 let pixels = std::slice::from_raw_parts(frame.data, stride * height);
-                let (rgb, w, h) = downscale(pixels, width, height, stride, PREVIEW_WIDTH);
-                if let Ok(jpeg) = encode(&rgb, w, h) {
+                let image = Rgb::from_rgbx(pixels, width, height, stride, PREVIEW_WIDTH);
+                if let Ok(jpeg) = image.jpeg(70) {
                     let mut state = preview.state.lock().unwrap();
                     state.jpeg = Some(Arc::new(jpeg));
                     state.width = width as u32;
@@ -448,6 +449,122 @@ fn receive(api: &'static Api, source: CString, preview: Arc<Preview>) {
     }
     preview.connected.store(false, Ordering::SeqCst);
     preview.finished.store(true, Ordering::SeqCst);
+}
+
+/// Frames on request, for calibration and panoramas, from the sender's
+/// low-bandwidth stream. The receiver stays connected while this is alive.
+pub struct Stills {
+    shared: Arc<StillShared>,
+}
+type StillRequest = (Instant, tokio::sync::oneshot::Sender<Rgb>);
+struct StillShared {
+    request: Mutex<Option<StillRequest>>,
+    stop: AtomicBool,
+}
+impl Ndi {
+    /// Starts a receiver whose frames are downscaled to at most `max_width`
+    /// when captured.
+    pub fn stills(&self, source: &str, max_width: usize) -> Result<Stills> {
+        let api = api().map_err(unavailable)?;
+        let name =
+            CString::new(source).map_err(|_| Error::Invalid("NDI source contains NUL".into()))?;
+        let shared = Arc::new(StillShared {
+            request: Mutex::new(None),
+            stop: AtomicBool::new(false),
+        });
+        let worker = shared.clone();
+        std::thread::Builder::new()
+            .name("ndi-stills".into())
+            .spawn(move || capture_stills(api, name, worker, max_width))
+            .map_err(|e| Error::Device(e.to_string()))?;
+        Ok(Stills { shared })
+    }
+}
+impl Stills {
+    /// The first frame that arrives after `after`, skipping a couple more so
+    /// frames already buffered in the network stack are not returned.
+    pub async fn capture_after(&self, after: Instant, timeout: Duration) -> Result<Rgb> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        *self.shared.request.lock().unwrap() = Some((after, tx));
+        tokio::time::timeout(timeout, rx)
+            .await
+            .map_err(|_| {
+                Error::Device("No NDI frame arrived; check the camera's NDI source".into())
+            })?
+            .map_err(|_| Error::Device("NDI still receiver stopped".into()))
+    }
+}
+impl Drop for Stills {
+    fn drop(&mut self) {
+        self.shared.stop.store(true, Ordering::SeqCst);
+    }
+}
+
+fn capture_stills(api: &'static Api, source: CString, shared: Arc<StillShared>, max_width: usize) {
+    let receiver_name = c"ATEM Control stills";
+    let settings = ffi::RecvCreateV3 {
+        source: ffi::Source {
+            ndi_name: source.as_ptr(),
+            url_address: std::ptr::null(),
+        },
+        color_format: ffi::COLOR_RGBX_RGBA,
+        bandwidth: ffi::BANDWIDTH_LOWEST,
+        allow_video_fields: false,
+        recv_name: receiver_name.as_ptr(),
+    };
+    // SAFETY: the receiver is used only on this thread and destroyed before it
+    // returns; each captured frame is read before it is freed.
+    unsafe {
+        let receiver = (api.recv_create)(&settings);
+        if receiver.is_null() {
+            return;
+        }
+        let mut skipped = 0;
+        while !shared.stop.load(Ordering::SeqCst) {
+            let mut frame: ffi::VideoFrameV2 = std::mem::zeroed();
+            let kind = (api.recv_capture)(
+                receiver,
+                &mut frame,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                200,
+            );
+            if kind == ffi::FRAME_ERROR {
+                break;
+            }
+            if kind != ffi::FRAME_VIDEO {
+                continue;
+            }
+            let arrived = Instant::now();
+            let mut request = shared.request.lock().unwrap();
+            let wanted = request.as_ref().is_some_and(|(after, _)| arrived > *after);
+            if !wanted {
+                skipped = 0;
+            } else if skipped < 2 {
+                skipped += 1;
+            } else if matches!(frame.fourcc, ffi::FOURCC_RGBA | ffi::FOURCC_RGBX)
+                && !frame.data.is_null()
+                && frame.xres > 0
+                && frame.yres > 0
+                && frame.line_stride_in_bytes >= frame.xres * 4
+            {
+                let (width, height, stride) = (
+                    frame.xres as usize,
+                    frame.yres as usize,
+                    frame.line_stride_in_bytes as usize,
+                );
+                let pixels = std::slice::from_raw_parts(frame.data, stride * height);
+                let image = Rgb::from_rgbx(pixels, width, height, stride, max_width);
+                if let Some((_, reply)) = request.take() {
+                    let _ = reply.send(image);
+                }
+                skipped = 0;
+            }
+            drop(request);
+            (api.recv_free_video)(receiver, &frame);
+        }
+        (api.recv_destroy)(receiver);
+    }
 }
 
 /// NDI PTZ requests, in NDI's normalized units.
@@ -646,53 +763,6 @@ fn control_camera(
     }
 }
 
-/// Box-filters RGBX/RGBA rows down to at most `max_width`, dropping alpha.
-fn downscale(
-    pixels: &[u8],
-    width: usize,
-    height: usize,
-    stride: usize,
-    max_width: usize,
-) -> (Vec<u8>, usize, usize) {
-    let w = width.min(max_width);
-    let h = (height * w / width).max(1);
-    let mut rgb = Vec::with_capacity(w * h * 3);
-    for y in 0..h {
-        let (y0, y1) = (
-            y * height / h,
-            ((y + 1) * height / h).max(y * height / h + 1),
-        );
-        for x in 0..w {
-            let (x0, x1) = (x * width / w, ((x + 1) * width / w).max(x * width / w + 1));
-            let mut sum = [0u32; 3];
-            for row in y0..y1 {
-                for column in x0..x1 {
-                    let i = row * stride + column * 4;
-                    for (channel, total) in sum.iter_mut().enumerate() {
-                        *total += u32::from(pixels[i + channel]);
-                    }
-                }
-            }
-            let count = ((y1 - y0) * (x1 - x0)) as u32;
-            rgb.extend(sum.map(|total| (total / count) as u8));
-        }
-    }
-    (rgb, w, h)
-}
-
-fn encode(rgb: &[u8], width: usize, height: usize) -> std::result::Result<Vec<u8>, String> {
-    let mut jpeg = vec![];
-    jpeg_encoder::Encoder::new(&mut jpeg, 70)
-        .encode(
-            rgb,
-            width as u16,
-            height as u16,
-            jpeg_encoder::ColorType::Rgb,
-        )
-        .map_err(|e| e.to_string())?;
-    Ok(jpeg)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -718,21 +788,6 @@ mod tests {
     }
 
     #[test]
-    fn downscale_averages_blocks_and_skips_row_padding() {
-        // 4x2 RGBX image with 4 bytes of row padding, halved to 2x1.
-        let mut pixels = vec![];
-        for row in 0..2u8 {
-            for column in 0..4u8 {
-                pixels.extend([column * 10 + row * 100, 50, 200, 255]);
-            }
-            pixels.extend([9, 9, 9, 9]);
-        }
-        let (rgb, w, h) = downscale(&pixels, 4, 2, 20, 2);
-        assert_eq!((w, h), (2, 1));
-        assert_eq!(rgb, vec![55, 50, 200, 75, 50, 200]);
-    }
-
-    #[test]
     fn maps_application_units_to_ndi_ptz_ranges() {
         let Some(Ptz::PanTilt(pan, tilt)) = normalized(&Command::PanTilt {
             pan: 32767,
@@ -751,12 +806,6 @@ mod tests {
             panic!()
         };
         assert_eq!((wide, tele), (0.0, 1.0));
-    }
-
-    #[test]
-    fn encodes_a_jpeg() {
-        let jpeg = encode(&[128; 16 * 9 * 3], 16, 9).unwrap();
-        assert_eq!(&jpeg[..2], &[0xff, 0xd8]);
     }
 
     /// Run with an NDI runtime and a live source, e.g.
