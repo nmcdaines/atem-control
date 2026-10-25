@@ -33,6 +33,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Notice } from "@/components/notice";
+import { Status } from "@/components/status";
+import { DeviceDock, homeCamera } from "@/components/device-dock";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { api } from "./api";
@@ -115,25 +117,6 @@ function Empty({ title, children }: { title: string; children: ReactNode }) {
       <h2>{title}</h2>
       <p>{children}</p>
     </div>
-  );
-}
-function Status({
-  state,
-  simulated,
-}: {
-  state?: DeviceState;
-  simulated: boolean;
-}) {
-  return (
-    <Badge
-      className={`status ${state?.status ?? "disconnected"}`}
-      variant="outline"
-    >
-      <i />
-      {simulated
-        ? "SIMULATED"
-        : (state?.status?.toUpperCase() ?? "DISCONNECTED")}
-    </Badge>
   );
 }
 export default function App() {
@@ -387,6 +370,9 @@ export default function App() {
           </>
         )}
       </main>
+      {snapshot && (
+        <DeviceDock snapshot={snapshot} disabled={disabled} task={task} />
+      )}
     </div>
   );
 }
@@ -765,16 +751,9 @@ function Camera({
               disabled={disabled}
               onClick={() => {
                 setTarget({ ...target, pan: 0, tilt: 0, zoom: 0 });
-                void task(async () => {
-                  await api.execute(device.id, {
-                    type: "pan_tilt",
-                    pan: 0,
-                    tilt: 0,
-                    pan_speed: target.pan_speed,
-                    tilt_speed: target.tilt_speed,
-                  });
-                  await api.execute(device.id, { type: "zoom", position: 0 });
-                });
+                void task(() =>
+                  homeCamera(device.id, target.pan_speed, target.tilt_speed),
+                );
               }}
               variant="outline"
             >

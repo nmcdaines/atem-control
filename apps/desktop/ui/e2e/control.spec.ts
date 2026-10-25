@@ -435,3 +435,62 @@ test("PTZ sliders and canvas edit a draft until movement and zoom are applied", 
     fullPage: true,
   });
 });
+
+test("docked device panels expand, control devices and stay collapsed after reload", async ({
+  page,
+  request,
+}) => {
+  const snapshot = async () =>
+    (await (
+      await request.get("http://127.0.0.1:3849/api/snapshot")
+    ).json()) as Snapshot;
+  const { config } = await snapshot();
+  const camera = config.devices.find((d) => d.id === "demo-camera")!;
+  const switcher = config.devices.find(
+    (d) => d.connection.type === "simulation" && d.connection.kind === "atem",
+  )!;
+  const dock = page.getByRole("complementary", { name: "Device dock" });
+  const header = (name: string) =>
+    dock.locator("button[aria-expanded]").filter({ hasText: name });
+  for (const device of config.devices)
+    await expect(header(device.name)).toHaveAttribute("aria-expanded", "false");
+
+  await header(camera.name).click();
+  await expect(header(camera.name)).toHaveAttribute("aria-expanded", "true");
+  await dock
+    .getByRole("button", { name: `${camera.name} Home`, exact: true })
+    .click();
+  const observed = () =>
+    snapshot().then(
+      (s) => s.devices.find((d) => d.device_id === camera.id)!.camera,
+    );
+  await expect.poll(observed).toEqual({ pan: 0, tilt: 0, zoom: 0 });
+  await dock
+    .getByRole("button", { name: `${camera.name} Pan right`, exact: true })
+    .click();
+  await expect.poll(observed).toEqual({ pan: 1638, tilt: 0, zoom: 0 });
+  await dock
+    .getByRole("button", { name: `${camera.name} Zoom in`, exact: true })
+    .click();
+  await expect.poll(observed).toEqual({ pan: 1638, tilt: 0, zoom: 1638 });
+
+  await header(switcher.name).click();
+  const program = dock.getByRole("group", {
+    name: `${switcher.name} Program`,
+  });
+  await program.getByRole("button").nth(1).click();
+  await expect(program.getByRole("button").nth(1)).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+
+  await header(camera.name).click();
+  await page.reload();
+  await expect(header(camera.name)).toHaveAttribute("aria-expanded", "false");
+  await expect(header(switcher.name)).toHaveAttribute("aria-expanded", "true");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: "../../../.local/device-dock.png" });
+});
