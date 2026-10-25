@@ -32,6 +32,7 @@ The adapter has no background inquiries, speed joystick control or vendor image 
 - Pan/tilt and zoom inquiries answer within about 20 ms, **including while moving** (intermediate positions are reported).
 - Ranges (from the Bitfocus BirdDog Companion module, consistent with readback): pan ±0x08DA (±2266) = ±175°, tilt -394…+0x049D (1181) = -30°…+90°, about 12.95 pan and 13.1 tilt units per degree; zoom 0…0x4000, 10× optical.
 - A 100-unit pan at speed 8 took about 0.4 s (~250 units/s). Moves land within 0–1 unit of the commanded position, occasionally 1 unit off in tilt, so "settled" must allow a non-exact final position.
+- Pan/tilt limit set (`81 01 06 07 00 0W …`) and clear are ACKed but **not enforced**: with ±300 limits set, an absolute move to pan 1000 still went there. Soft limits are therefore enforced by the application only.
 - NDI: see below; the P100 ignores NDI absolute pan/tilt and sends no position metadata.
 
 ## NDI preview

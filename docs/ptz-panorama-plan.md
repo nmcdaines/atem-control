@@ -11,7 +11,13 @@ What changed from the draft once the hardware was measured:
 - The P100 stops one unit short of targets, so restores aim past by the miss once; the camera returns to its exact start.
 - Lost inquiries are retried (Sony framing only), and jobs retry absolute moves, which are idempotent; manual moves are never retried.
 
-Remaining: per-tile brightness matching at seams, polygon limits, optional camera-side VISCA limits, and an on-air check.
+Follow-up work, also done:
+
+- Scans without a saved range first find the camera's limits (four moves to the extremes, capped at ±180° pan and ±90° tilt), then plan the grid. The default ±32767 profile range previously overflowed a 16-bit subtraction while planning.
+- Per-tile gain compensation (Brown & Lowe, gain spread 0.3) evens out auto-exposure differences before seams are feathered.
+- Soft limits can be a polygon (3–64 points) as well as a rectangle; the visible frame must lie entirely inside, including for concave shapes.
+- Cameras can record the switcher input they feed. The camera card and dock show ON AIR / PREVIEW, and calibration and scans are refused while the camera is on program.
+- Camera-side VISCA limits were tested and not built: the P100 acknowledges them but does not enforce them.
 
 ## Goal
 
