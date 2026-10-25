@@ -1,5 +1,6 @@
 //! Explicit VISCA-IP profiles. No movement retries or implicit protocol failover.
-//! ACK means accepted; completion is followed by inquiries for observed position.
+//! ACK means accepted; completion (or, for cameras that never report it, the
+//! observed position settling) is followed by inquiries for observed position.
 use crate::adapter::Adapter;
 use async_trait::async_trait;
 use control_core::*;
@@ -166,6 +167,9 @@ impl Visca {
             Some(s) => s,
             None => self.connect().await?,
         };
+        // A motion whose completion never arrived leaves a reply that may still
+        // turn up on this socket, so the next command starts a fresh session.
+        let mut reusable = true;
         let result = async {
             if matches!(command, Command::PanTilt { .. } | Command::Zoom { .. }) {
                 self.moving.store(true, Ordering::SeqCst);
@@ -174,12 +178,26 @@ impl Visca {
                 state.camera = None;
             }
             for bytes in movement(command)? {
-                session
-                    .command(
-                        &bytes,
-                        matches!(command, Command::PanTilt { .. } | Command::Zoom { .. }),
-                    )
-                    .await?;
+                match command {
+                    Command::PanTilt { pan, tilt, .. } => {
+                        let target = [*pan as u16, *tilt as u16];
+                        if !session
+                            .motion(&bytes, &[0x81, 9, 6, 0x12, 0xff], &target)
+                            .await?
+                        {
+                            reusable = false;
+                        }
+                    }
+                    Command::Zoom { position } => {
+                        if !session
+                            .motion(&bytes, &[0x81, 9, 4, 0x47, 0xff], &[*position])
+                            .await?
+                        {
+                            reusable = false;
+                        }
+                    }
+                    _ => session.command(&bytes).await?,
+                }
             }
             if matches!(command, Command::Stop) {
                 self.moving.store(false, Ordering::SeqCst);
@@ -207,7 +225,7 @@ impl Visca {
             Ok(())
         }
         .await;
-        if result.is_ok() {
+        if result.is_ok() && reusable {
             *guard = Some(session);
         }
         result
@@ -235,7 +253,13 @@ impl Session {
         Ok(sequence)
     }
     async fn receive(&mut self, sequence: u32, timeout: Duration) -> Result<Vec<u8>> {
-        tokio::time::timeout(timeout, async {
+        self.poll(sequence, timeout).await?.ok_or_else(|| {
+            network("Response timed out; command may have executed. No automatic retry.")
+        })
+    }
+    /// Like `receive`, but a timeout yields `None` instead of an error.
+    async fn poll(&mut self, sequence: u32, timeout: Duration) -> Result<Option<Vec<u8>>> {
+        let reply = tokio::time::timeout(timeout, async {
             loop {
                 let bytes = match &mut self.transport {
                     Transport::Udp(socket) => {
@@ -280,42 +304,97 @@ impl Session {
                 return Ok(bytes);
             }
         })
-        .await
-        .map_err(|_| {
-            network("Response timed out; command may have executed. No automatic retry.")
-        })?
+        .await;
+        match reply {
+            Ok(reply) => reply.map(Some),
+            Err(_) => Ok(None),
+        }
     }
-    async fn command(&mut self, payload: &[u8], movement: bool) -> Result<()> {
-        let sequence = self.send(payload, false).await?;
-        let first = self.receive(sequence, Duration::from_secs(2)).await?;
-        let completed = if first[1] & 0xf0 == 0x40 {
-            let completion = self
-                .receive(
-                    sequence,
-                    Duration::from_secs(if movement { 120 } else { 2 }),
-                )
-                .await?;
-            if completion[1] & 0x0f != first[1] & 0x0f {
-                return Err(network("Completion socket did not match ACK"));
-            }
-            completion
-        } else {
-            first
-        };
-        if completed[1] & 0xf0 != 0x50 {
-            return Err(network("Expected command completion"));
+    async fn command(&mut self, payload: &[u8]) -> Result<()> {
+        if let Some((sequence, socket)) = self.start(payload).await? {
+            let completion = self.receive(sequence, Duration::from_secs(2)).await?;
+            Self::complete(&completion, socket)?;
         }
         Ok(())
     }
+    /// Sends a command and waits for acceptance. Returns the sequence and
+    /// socket still awaiting completion, or `None` if it already completed.
+    async fn start(&mut self, payload: &[u8]) -> Result<Option<(u32, u8)>> {
+        let sequence = self.send(payload, false).await?;
+        let first = self.receive(sequence, Duration::from_secs(2)).await?;
+        if first[1] & 0xf0 == 0x40 {
+            return Ok(Some((sequence, first[1] & 0x0f)));
+        }
+        Self::complete(&first, first[1] & 0x0f)?;
+        Ok(None)
+    }
+    fn complete(reply: &[u8], socket: u8) -> Result<()> {
+        if reply[1] & 0xf0 != 0x50 {
+            return Err(network("Expected command completion"));
+        }
+        if reply[1] & 0x0f != socket {
+            return Err(network("Completion socket did not match ACK"));
+        }
+        Ok(())
+    }
+    /// Runs a motion command until it completes. Some cameras never send
+    /// completion for absolute moves, so after a grace period the observed
+    /// position is polled until it reaches `target` or stops changing.
+    /// Returns false when completion was inferred from position, meaning a
+    /// late completion may still arrive on this session.
+    async fn motion(&mut self, payload: &[u8], inquiry: &[u8], target: &[u16]) -> Result<bool> {
+        let Some((sequence, socket)) = self.start(payload).await? else {
+            return Ok(true);
+        };
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(120);
+        let mut wait = Duration::from_secs(1);
+        let mut last = None;
+        let mut unchanged = 0;
+        loop {
+            if let Some(reply) = self.poll(sequence, wait).await? {
+                Self::complete(&reply, socket)?;
+                return Ok(true);
+            }
+            if tokio::time::Instant::now() >= deadline {
+                return Err(network("Motion did not complete"));
+            }
+            let reply = self.inquire(inquiry).await?;
+            let observed = reply[2..reply.len() - 1]
+                .chunks(4)
+                .map(position)
+                .collect::<Result<Vec<_>>>()?;
+            if observed == target {
+                return Ok(false);
+            }
+            if last.as_ref() == Some(&observed) {
+                unchanged += 1;
+                if unchanged >= 4 {
+                    return Ok(false);
+                }
+            } else {
+                unchanged = 0;
+                last = Some(observed);
+            }
+            wait = Duration::from_millis(250);
+        }
+    }
     async fn inquire(&mut self, payload: &[u8]) -> Result<Vec<u8>> {
         let sequence = self.send(payload, true).await?;
-        let reply = self.receive(sequence, Duration::from_secs(2)).await?;
-        if reply[1] != 0x50 {
-            return Err(network("Expected inquiry response"));
+        loop {
+            let reply = self.receive(sequence, Duration::from_secs(2)).await?;
+            // Without Sony framing a late motion completion can arrive here;
+            // inquiry replies always use socket 0 and carry data.
+            if reply.len() == 3 && reply[1] & 0xf0 == 0x50 && reply[1] & 0x0f != 0 {
+                continue;
+            }
+            if reply[1] != 0x50 {
+                return Err(network("Expected inquiry response"));
+            }
+            return Ok(reply);
         }
-        Ok(reply)
     }
 }
+
 #[async_trait]
 impl Adapter for Visca {
     async fn execute(&self, command: &Command) -> Result<()> {
@@ -427,6 +506,58 @@ mod tests {
             .unwrap();
         assert!(matches!(motion.await.unwrap(), Err(Error::Cancelled)));
         assert_eq!(adapter.snapshot().await.feedback, Feedback::Observed);
+        server.await.unwrap();
+    }
+    #[tokio::test]
+    async fn motion_without_completion_finishes_when_position_reaches_target() {
+        let camera = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let port = camera.local_addr().unwrap().port();
+        let server = tokio::spawn(async move {
+            let mut buffer = [0u8; 128];
+            // Two consecutive moves; the camera ACKs each but never sends completion.
+            for target in [[0, 0, 7, 8], [0, 0, 1, 2]] {
+                let (_, peer) = camera.recv_from(&mut buffer).await.unwrap();
+                assert_eq!(&buffer[..4], &[0x81, 1, 6, 2]);
+                camera.send_to(&[0x90, 0x41, 0xff], peer).await.unwrap();
+                let mut reached = vec![0x90, 0x50];
+                reached.extend(target);
+                reached.extend([0, 0, 0, 3, 0xff]);
+                for response in [reached.clone(), reached, vec![0x90, 0x50, 0, 0, 0, 0, 0xff]] {
+                    let (_, peer) = camera.recv_from(&mut buffer).await.unwrap();
+                    camera.send_to(&response, peer).await.unwrap();
+                }
+            }
+        });
+        let adapter = Visca::new(Device {
+            id: "no-completion".into(),
+            name: "No completion".into(),
+            connection: Connection::Visca {
+                address: "127.0.0.1".into(),
+                port,
+                framing: Framing::RawUdp,
+                pan_limit: 32767,
+                tilt_limit: 32767,
+                zoom_limit: 16384,
+            },
+        });
+        for (pan, tilt) in [(0x78, 3), (0x12, 3)] {
+            tokio::time::timeout(
+                Duration::from_secs(3),
+                adapter.execute(&Command::PanTilt {
+                    pan,
+                    tilt,
+                    pan_speed: 8,
+                    tilt_speed: 8,
+                }),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+            assert_eq!(
+                adapter.snapshot().await.camera,
+                Some(CameraState { pan, tilt, zoom: 0 })
+            );
+        }
         server.await.unwrap();
     }
     #[tokio::test]
