@@ -24,6 +24,9 @@ fn main() {
         DeviceState::decl(&cfg),
         RunStatus::decl(&cfg),
         Run::decl(&cfg),
+        NdiSource::decl(&cfg),
+        NdiPreview::decl(&cfg),
+        NdiSnapshot::decl(&cfg),
         Snapshot::decl(&cfg),
     ];
     let output = format!(

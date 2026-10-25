@@ -2,8 +2,12 @@
 export type PostgresImportSettings = { host: string, port: number, database: string, username: string, password: string, schema: string, require_tls: boolean, };
 export type DeviceKind = "atem" | "camera";
 export type Framing = "sony_udp" | "raw_udp" | "raw_tcp";
-export type Connection = { "type": "simulation", kind: DeviceKind, } | { "type": "atem", address: string, } | { "type": "visca", address: string, port: number, framing: Framing, pan_limit: number, tilt_limit: number, zoom_limit: number, };
-export type Device = { id: string, name: string, connection: Connection, };
+export type Connection = { "type": "simulation", kind: DeviceKind, } | { "type": "atem", address: string, } | { "type": "visca", address: string, port: number, framing: Framing, pan_limit: number, tilt_limit: number, zoom_limit: number, } | { "type": "ndi", source: string, };
+export type Device = { id: string, name: string, connection: Connection, 
+/**
+ * NDI® source name for a camera's preview feed, e.g. "CAMERA (Channel 1)".
+ */
+ndi_source?: string, };
 export type Command = { "type": "set_program", input: number, } | { "type": "set_preview", input: number, } | { "type": "cut" } | { "type": "auto" } | { "type": "set_input_name", input: number, long_name: string, short_name: string, } | { "type": "set_pip", enabled: boolean, source: number, x: number, y: number, size: number, } | { "type": "pan_tilt", pan: number, tilt: number, pan_speed: number, tilt_speed: number, } | { "type": "zoom", position: number, } | { "type": "stop" } | { "type": "refresh" };
 export type Action = { device_id: string, command: Command, delay_ms: number, timeout_ms: number, };
 export type Step = { "type": "action", action: Action, } | { "type": "wait", duration_ms: number, } | { "type": "parallel", actions: Array<Action>, } | { "type": "legacy_parallel", actions: Array<Action>, };
@@ -19,4 +23,23 @@ export type Feedback = "simulated" | "observed" | "commanded" | "unknown";
 export type DeviceState = { device_id: string, status: ConnectionStatus, feedback: Feedback, error: string | null, switcher: SwitcherState | null, camera: CameraState | null, };
 export type RunStatus = "running" | "completed" | "cancelled" | "failed";
 export type Run = { id: string, macro_id: string, name: string, status: RunStatus, completed_steps: number, total_steps: number, error: string | null, };
-export type Snapshot = { config: Config, devices: Array<DeviceState>, runs: Array<Run>, ndi_available: boolean, };
+export type NdiSource = { name: string, 
+/**
+ * "ip:port" the sender advertises, when known.
+ */
+address: string | null, };
+export type NdiPreview = { device_id: string, source: string, connected: boolean, 
+/**
+ * Reported by the sender a few seconds after connecting; false until then.
+ */
+ptz_supported: boolean, width: number, height: number, };
+export type NdiSnapshot = { 
+/**
+ * Whether an NDI runtime library could be loaded.
+ */
+available: boolean, error: string | null, 
+/**
+ * Receivers currently feeding a preview; idle previews are closed.
+ */
+previews: Array<NdiPreview>, };
+export type Snapshot = { config: Config, devices: Array<DeviceState>, runs: Array<Run>, ndi: NdiSnapshot, };

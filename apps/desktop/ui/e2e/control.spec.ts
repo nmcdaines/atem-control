@@ -506,3 +506,80 @@ test("docked device panels expand, control devices and stay collapsed after relo
   ).toBeLessThanOrEqual(390);
   await page.screenshot({ path: "../../../.local/device-dock.png" });
 });
+
+test("NDI preview draws inside the readback frame and explains a missing runtime", async ({
+  page,
+}) => {
+  // Control NDI availability through the snapshot so the test does not
+  // depend on whether this machine has an NDI runtime installed.
+  let ndiAvailable = false;
+  await page.route("**/api/snapshot", async (route) => {
+    const response = await route.fetch();
+    const snapshot = (await response.json()) as Snapshot;
+    snapshot.ndi = ndiAvailable
+      ? { available: true, error: null, previews: [] }
+      : {
+          available: false,
+          error: "NDI runtime not found. Install the NDI runtime",
+          previews: [],
+        };
+    if (ndiAvailable)
+      for (const device of snapshot.config.devices)
+        if (device.id === "demo-camera") device.ndi_source = "STUDIO (CAM)";
+    return route.fulfill({ response, json: snapshot });
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "Devices", exact: true }).click();
+  await page.getByRole("button", { name: "Edit", exact: true }).nth(1).click();
+  await expect(page.getByLabel("NDI® preview source")).toBeDisabled();
+  await expect(page.getByText(/NDI runtime not found/).first()).toBeVisible();
+
+  // Pretend a runtime and source exist, and serve a solid red frame.
+  const red = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 64;
+    canvas.height = 36;
+    const context = canvas.getContext("2d")!;
+    context.fillStyle = "#ff0000";
+    context.fillRect(0, 0, 64, 36);
+    return canvas.toDataURL("image/jpeg").split(",")[1];
+  });
+  let previews = 0;
+  await page.route("**/api/ndi/preview/demo-camera", (route) => {
+    previews++;
+    return route.fulfill({
+      contentType: "image/jpeg",
+      body: Buffer.from(red, "base64"),
+    });
+  });
+  ndiAvailable = true;
+  await page.getByRole("button", { name: "Cameras", exact: true }).click();
+  const canvas = page.getByRole("img", { name: /^PTZ target map:/ });
+  await expect(
+    page.getByRole("button", { name: "Live in frame" }),
+  ).toBeVisible();
+  const pixel = (x: number, y: number) =>
+    canvas.evaluate(
+      (element: HTMLCanvasElement, [x, y]) => {
+        const ratio = element.width / element.getBoundingClientRect().width;
+        return [
+          ...element
+            .getContext("2d")!
+            .getImageData(Math.round(x * ratio), Math.round(y * ratio), 1, 1)
+            .data,
+        ];
+      },
+      [x, y],
+    );
+  const box = (await canvas.boundingBox())!;
+  // The simulated camera reads back 0/0/0, so its frame is centred; the
+  // corner is outside it and stays dark.
+  await expect
+    .poll(async () => (await pixel(box.width / 2 - 20, box.height / 2 - 20))[0])
+    .toBeGreaterThan(200);
+  expect((await pixel(5, 5))[0]).toBeLessThan(60);
+  await page.getByRole("button", { name: "Live in frame" }).click();
+  await expect.poll(async () => (await pixel(5, 5))[0]).toBeGreaterThan(200);
+  // Frames keep being polled, which keeps the receiver connected.
+  await expect.poll(() => previews).toBeGreaterThan(2);
+});

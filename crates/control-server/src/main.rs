@@ -1,8 +1,8 @@
 //! Loopback-only development host for the same Rust services used by Tauri.
 use axum::{
     Json, Router,
-    extract::{DefaultBodyLimit, State},
-    http::StatusCode,
+    extract::{DefaultBodyLimit, Path, State},
+    http::{StatusCode, header},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
@@ -108,6 +108,26 @@ async fn postgres(
     Ok(Json(control_storage::postgres::preview(settings).await?))
 }
 
+async fn ndi_sources(State(app): App) -> std::result::Result<Json<Vec<NdiSource>>, ApiError> {
+    Ok(Json(app.ndi_sources().await?))
+}
+async fn ndi_preview(
+    State(app): App,
+    Path(device_id): Path<String>,
+) -> std::result::Result<Response, ApiError> {
+    Ok(match app.ndi_preview(&device_id).await? {
+        Some(jpeg) => (
+            [
+                (header::CONTENT_TYPE, "image/jpeg"),
+                (header::CACHE_CONTROL, "no-store"),
+            ],
+            (*jpeg).clone(),
+        )
+            .into_response(),
+        None => StatusCode::NO_CONTENT.into_response(),
+    })
+}
+
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let mut database = PathBuf::from(".local/control.sqlite3");
@@ -139,6 +159,8 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         .route("/api/demo", post(demo))
         .route("/api/legacy", post(legacy))
         .route("/api/postgres", post(postgres))
+        .route("/api/ndi/sources", get(ndi_sources))
+        .route("/api/ndi/preview/{device_id}", get(ndi_preview))
         .layer(DefaultBodyLimit::max(2 * 1024 * 1024))
         .with_state(controller.clone());
     let listener = tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await?;

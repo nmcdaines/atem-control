@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
-import { Crosshair, MoveHorizontal, MoveVertical, ZoomIn } from "lucide-react";
+import {
+  Crosshair,
+  MoveHorizontal,
+  MoveVertical,
+  Video,
+  ZoomIn,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -13,13 +20,17 @@ export function PtzPositionControl({
   limits,
   disabled,
   onChange,
+  preview,
 }: {
   target: PtzPosition;
   observed?: PtzPosition | null;
   limits: PtzLimits;
   disabled: boolean;
   onChange: (position: PtzPosition) => void;
+  /** Latest live camera frame, drawn where the camera is pointing. */
+  preview?: ImageBitmap | null;
 }) {
+  const [previewMode, setPreviewMode] = useState<"frame" | "full">("frame");
   const canvas = useRef<HTMLCanvasElement>(null);
   // Several pointer or wheel events can arrive before a re-render, so each
   // change builds on the latest value rather than the rendered prop.
@@ -80,7 +91,34 @@ export function PtzPositionControl({
     context.clearRect(0, 0, size.width, size.height);
     context.fillStyle = "#111113";
     context.fillRect(0, 0, size.width, size.height);
+    // Inside the readback frame the image sits where the camera points. With
+    // no readback (e.g. mid-move) it fills the map dimmed, as a monitor only.
+    const live = (() => {
+      try {
+        if (!preview) return false;
+        if (previewMode === "frame" && observed) {
+          const frame = frameFor(observed, limits, size.width, size.height);
+          context.drawImage(
+            preview,
+            frame.x,
+            frame.y,
+            frame.width,
+            frame.height,
+          );
+        } else {
+          context.globalAlpha = previewMode === "full" ? 1 : 0.35;
+          context.drawImage(preview, 0, 0, size.width, size.height);
+          context.globalAlpha = 1;
+        }
+        return true;
+      } catch {
+        // A bitmap released between frames is skipped until the next one.
+        context.globalAlpha = 1;
+        return false;
+      }
+    })();
     context.lineWidth = 1;
+    if (live && previewMode === "full") context.globalAlpha = 0.35;
     for (let line = 1; line < 8; line++) {
       context.strokeStyle = line === 4 ? "#45454b" : "#242428";
       context.beginPath();
@@ -92,6 +130,7 @@ export function PtzPositionControl({
       context.lineTo(size.width, (size.height * line) / 8);
       context.stroke();
     }
+    context.globalAlpha = 1;
     const drawFrame = (
       position: PtzPosition,
       color: string,
@@ -124,7 +163,16 @@ export function PtzPositionControl({
     context.fillText("+X", size.width - 24, size.height - 10);
     context.fillText("+Y", 9, 17);
     context.fillText("−Y", 9, size.height - 27);
-  }, [target, observed, limits.pan, limits.tilt, limits.zoom, size]);
+  }, [
+    target,
+    observed,
+    limits.pan,
+    limits.tilt,
+    limits.zoom,
+    size,
+    preview,
+    previewMode,
+  ]);
 
   function point(event: PointerEvent<HTMLCanvasElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -190,7 +238,21 @@ export function PtzPositionControl({
           <Crosshair className="size-4 text-muted-foreground" />
           Target frame
         </span>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {preview && (
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              aria-pressed={previewMode === "full"}
+              onClick={() =>
+                setPreviewMode(previewMode === "frame" ? "full" : "frame")
+              }
+            >
+              <Video aria-hidden />
+              {previewMode === "frame" ? "Live in frame" : "Live full view"}
+            </Button>
+          )}
           <Badge variant="outline" className="gap-1.5 text-[10px]">
             <span className="size-1.5 rounded-full bg-blue-300" />
             Target

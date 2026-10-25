@@ -74,7 +74,9 @@ pub fn run() {
             cancel_run,
             load_demo,
             preview_legacy,
-            preview_postgres
+            preview_postgres,
+            ndi_sources,
+            ndi_preview
         ])
         .build(tauri::generate_context!())
         .expect("Unable to start ATEM Control");
@@ -85,6 +87,24 @@ pub fn run() {
     });
 }
 
+#[tauri::command]
+async fn ndi_sources(app: App<'_>) -> std::result::Result<Vec<NdiSource>, String> {
+    app.ndi_sources().await.map_err(|e| e.to_string())
+}
+/// Returns the latest preview JPEG as raw bytes; empty until a frame arrives.
+#[tauri::command]
+async fn ndi_preview(
+    app: App<'_>,
+    device_id: String,
+) -> std::result::Result<tauri::ipc::Response, String> {
+    let jpeg = app
+        .ndi_preview(&device_id)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(tauri::ipc::Response::new(
+        jpeg.map(|j| (*j).clone()).unwrap_or_default(),
+    ))
+}
 #[tauri::command]
 async fn preview_postgres(
     settings: PostgresImportSettings,

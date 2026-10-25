@@ -487,6 +487,7 @@ mod tests {
                 tilt_limit: 32767,
                 zoom_limit: 16384,
             },
+            ndi_source: None,
         }));
         let moving = adapter.clone();
         let motion = tokio::spawn(async move {
@@ -539,6 +540,7 @@ mod tests {
                 tilt_limit: 32767,
                 zoom_limit: 16384,
             },
+            ndi_source: None,
         });
         for (pan, tilt) in [(0x78, 3), (0x12, 3)] {
             tokio::time::timeout(
@@ -585,6 +587,7 @@ mod tests {
                 tilt_limit: 32767,
                 zoom_limit: 16384,
             },
+            ndi_source: None,
         };
         let adapter = Visca::new(device);
         adapter.execute(&Command::Refresh).await.unwrap();
@@ -645,6 +648,7 @@ mod tests {
                 tilt_limit: 32767,
                 zoom_limit: 16384,
             },
+            ndi_source: None,
         });
         adapter.execute(&Command::Refresh).await.unwrap();
         assert_eq!(
@@ -693,6 +697,7 @@ mod tests {
                 tilt_limit: 32767,
                 zoom_limit: 16384,
             },
+            ndi_source: None,
         });
         adapter
             .execute(&Command::Zoom { position: 256 })

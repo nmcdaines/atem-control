@@ -2,6 +2,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import type {
   Command,
   Config,
+  NdiSource,
   PostgresImportSettings,
   Snapshot,
 } from "./bindings";
@@ -57,4 +58,31 @@ export const api = {
     isTauri()
       ? invoke<ImportPreview>("preview_postgres", { settings })
       : request<ImportPreview>("postgres", settings),
+  ndiSources: () =>
+    isTauri()
+      ? invoke<NdiSource[]>("ndi_sources")
+      : request<NdiSource[]>("ndi/sources"),
+  // The latest low-resolution preview JPEG, or null before the first frame.
+  ndiPreview: async (device_id: string): Promise<Blob | null> => {
+    if (isTauri()) {
+      const bytes = await invoke<ArrayBuffer>("ndi_preview", {
+        deviceId: device_id,
+      });
+      return bytes.byteLength
+        ? new Blob([bytes], { type: "image/jpeg" })
+        : null;
+    }
+    const response = await fetch(
+      `/api/ndi/preview/${encodeURIComponent(device_id)}`,
+      { cache: "no-store" },
+    );
+    if (response.status === 204) return null;
+    if (!response.ok) {
+      const error = await response
+        .json()
+        .catch(() => ({ error: response.statusText }));
+      throw new Error(error.error ?? response.statusText);
+    }
+    return response.blob();
+  },
 };

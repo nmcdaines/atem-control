@@ -22,7 +22,19 @@ Commands use absolute signed 16-bit pan/tilt positions and unsigned zoom positio
 
 Movement completion may take longer than an ACK; macro deadlines remain explicit. A manual operation has a 30-second application deadline. Cancellation invalidates its session to prevent a late response from completing a future command. Stop interrupts the active wait, discards stale queued work, and sends both pan/tilt-stop and zoom-stop. Shutdown and macro failure attempt a bounded best-effort stop.
 
-The adapter has no background inquiries, speed joystick control, vendor image adjustments or NDI support. Real-device tests must cover framing, coordinate limits, signed position representation, command completion, stop, loss of network, sequence reset and competing controllers.
+If a camera ACKs a motion but never reports completion, the adapter waits 1 s, then polls position every 250 ms until it reaches the target or stops changing. The session is then replaced so a late completion cannot be mistaken for a later reply.
+
+The adapter has no background inquiries, speed joystick control or vendor image adjustments. Real-device tests must cover framing, coordinate limits, signed position representation, command completion, stop, loss of network, sequence reset and competing controllers.
+
+## NDI preview
+
+`control-runtime/src/ndi.rs` loads the NDI runtime when first needed instead of linking it, so builds need no NDI SDK and the app starts normally without NDI. It searches, in order: `NDI_LIBRARY` (an explicit library file), `NDI_RUNTIME_DIR_V6`/`NDI_RUNTIME_DIR_V5` (set by the NDI runtime installers), next to the executable and in the app bundle's `Frameworks`, then the SDK/system locations. No runtime is bundled yet; bundling requires following the NDI SDK licence and notice terms.
+
+A camera device can name an NDI source. Reading its preview starts a receiver on the sender's lowest-bandwidth stream, encodes about 10 JPEG frames per second at up to 480 px wide, and disconnects 10 s after the UI stops polling. The UI draws the image inside the readback frame (or dimmed across the map when there is no readback), with a full-view toggle. The receiver also reports whether the sender advertises NDI PTZ; NDI PTZ commands are not used because NDI provides no position readback, and VISCA remains the movement path.
+
+Verified on a BirdDog camera (`BIRDDOG-787B9`, 640×360 low-bandwidth stream, NDI PTZ advertised) using the NDI 5.5.1 runtime bundled with NDI Tools: `NDI_LIBRARY="/Applications/NDI Video Monitor.app/Contents/Frameworks/libndi_advanced.dylib"`. That library is suitable for local development only. The ignored test `ndi::tests::receives_a_preview_from_a_live_source` repeats the check with `NDI_TEST_SOURCE` set.
+
+NDI® is a registered trademark of Vizrt NDI AB.
 
 ## Automated checks
 

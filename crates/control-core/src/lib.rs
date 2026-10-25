@@ -64,13 +64,18 @@ pub enum Connection {
         tilt_limit: u16,
         zoom_limit: u16,
     },
+    /// A camera driven by NDI® PTZ commands, which give no position readback.
+    /// Positions use the default raw scale: pan/tilt ±32767, zoom 0–16384.
+    Ndi {
+        source: String,
+    },
 }
 impl Connection {
     pub fn kind(&self) -> DeviceKind {
         match self {
             Self::Simulation { kind } => *kind,
             Self::Atem { .. } => DeviceKind::Atem,
-            Self::Visca { .. } => DeviceKind::Camera,
+            Self::Visca { .. } | Self::Ndi { .. } => DeviceKind::Camera,
         }
     }
 }
@@ -81,6 +86,10 @@ pub struct Device {
     pub id: String,
     pub name: String,
     pub connection: Connection,
+    /// NDI® source name for a camera's preview feed, e.g. "CAMERA (Channel 1)".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ndi_source: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
@@ -284,6 +293,24 @@ impl Config {
             if device.name.trim().is_empty() || device.name.len() > 100 {
                 return invalid("Device name must contain 1–100 characters");
             }
+            if let Some(source) = &device.ndi_source
+                && (device.connection.kind() != DeviceKind::Camera
+                    || source.trim().is_empty()
+                    || source.len() > 256
+                    || source.contains('\0'))
+            {
+                return invalid("NDI sources apply to cameras and must contain 1–256 characters");
+            }
+            if let Connection::Ndi { source } = &device.connection
+                && (source.trim().is_empty()
+                    || source.len() > 256
+                    || source.contains('\0')
+                    || device.ndi_source.is_some())
+            {
+                return invalid(
+                    "NDI cameras need a 1–256 character source and use it for their preview",
+                );
+            }
             match &device.connection {
                 Connection::Atem { address } | Connection::Visca { address, .. } => {
                     address
@@ -374,6 +401,7 @@ pub fn demo_config() -> Config {
                 connection: Connection::Simulation {
                     kind: DeviceKind::Atem,
                 },
+                ndi_source: None,
             },
             Device {
                 id: "demo-camera".into(),
@@ -381,6 +409,7 @@ pub fn demo_config() -> Config {
                 connection: Connection::Simulation {
                     kind: DeviceKind::Camera,
                 },
+                ndi_source: None,
             },
         ],
         macros: vec![Macro {
@@ -532,7 +561,31 @@ pub struct Snapshot {
     pub config: Config,
     pub devices: Vec<DeviceState>,
     pub runs: Vec<Run>,
-    pub ndi_available: bool,
+    pub ndi: NdiSnapshot,
+}
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, TS)]
+pub struct NdiSnapshot {
+    /// Whether an NDI runtime library could be loaded.
+    pub available: bool,
+    pub error: Option<String>,
+    /// Receivers currently feeding a preview; idle previews are closed.
+    pub previews: Vec<NdiPreview>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
+pub struct NdiSource {
+    pub name: String,
+    /// "ip:port" the sender advertises, when known.
+    pub address: Option<String>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, TS)]
+pub struct NdiPreview {
+    pub device_id: String,
+    pub source: String,
+    pub connected: bool,
+    /// Reported by the sender a few seconds after connecting; false until then.
+    pub ptz_supported: bool,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[cfg(test)]

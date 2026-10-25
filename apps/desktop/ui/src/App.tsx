@@ -34,6 +34,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Notice } from "@/components/notice";
 import { Combobox } from "@/components/combobox";
+import { NdiSourceField } from "@/components/ndi-source-field";
+import { useNdiPreview } from "@/lib/use-ndi-preview";
 import { Status } from "@/components/status";
 import { DeviceDock, homeCamera } from "@/components/device-dock";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -47,6 +49,7 @@ import type {
   Device,
   DeviceState,
   Macro,
+  NdiSnapshot,
   Snapshot,
   Step,
 } from "./bindings";
@@ -213,7 +216,11 @@ export default function App() {
             {online ? "RUST CORE ONLINE" : "CORE OFFLINE"}
           </Badge>
           <p>Local control. Shared workflow.</p>
-          <small>NDI integration · planned</small>
+          <small>
+            {snapshot?.ndi.available
+              ? "NDI® preview ready"
+              : "NDI® runtime not found"}
+          </small>
         </div>
       </aside>
       <main>
@@ -629,6 +636,7 @@ function Cameras({
             device={device}
             state={snapshot.devices.find((s) => s.device_id === device.id)}
             config={snapshot.config}
+            ndi={snapshot.ndi}
             disabled={disabled}
             task={task}
             save={save}
@@ -642,6 +650,7 @@ function Camera({
   device,
   state,
   config,
+  ndi,
   disabled,
   task,
   save,
@@ -649,6 +658,7 @@ function Camera({
   device: Device;
   state?: DeviceState;
   config: Config;
+  ndi: NdiSnapshot;
   disabled: boolean;
   task: Task;
   save: Save;
@@ -662,6 +672,12 @@ function Camera({
   });
   const [presetName, setPresetName] = useState("");
   const current = state?.camera;
+  const ndiSource =
+    device.connection.type === "ndi"
+      ? device.connection.source
+      : device.ndi_source;
+  const preview = useNdiPreview(device.id, ndi.available && !!ndiSource);
+  const ndiStatus = ndi.previews.find((p) => p.device_id === device.id);
   const send = (command: Command) =>
     void task(() => api.execute(device.id, command));
   const pl =
@@ -719,7 +735,19 @@ function Camera({
             limits={{ pan: pl, tilt: tl, zoom: zl }}
             disabled={disabled}
             onChange={(position) => setTarget({ ...target, ...position })}
+            preview={preview.frame}
           />
+          {ndiSource && (
+            <p className="muted mt-2" role="status">
+              NDI® {ndiSource} ·{" "}
+              {!ndi.available
+                ? "runtime not found"
+                : preview.error ||
+                  (ndiStatus?.connected && ndiStatus.width
+                    ? `live ${ndiStatus.width}×${ndiStatus.height}${ndiStatus.ptz_supported ? " · camera reports NDI PTZ" : ""}`
+                    : "connecting…")}
+            </p>
+          )}
         </div>
         <div>
           {" "}
@@ -885,8 +913,8 @@ function Camera({
             </Button>
           </form>
           <p className="muted">
-            Image controls and NDI are planned. Actual camera movement requires
-            a verified VISCA profile.
+            Camera movement uses VISCA, which reports position. Set an NDI®
+            source in Devices for a live preview; image controls are planned.
           </p>
         </div>
       </div>
@@ -1644,7 +1672,9 @@ function Devices({
                 <p>
                   {device.connection.type === "simulation"
                     ? `Simulated ${device.connection.kind}`
-                    : `${device.connection.type.toUpperCase()} · ${device.connection.address}`}
+                    : device.connection.type === "ndi"
+                      ? `NDI · ${device.connection.source}`
+                      : `${device.connection.type.toUpperCase()} · ${device.connection.address}`}
                 </p>
                 {state?.error && <Notice>{state.error}</Notice>}
               </div>
@@ -1697,7 +1727,9 @@ function Devices({
                   ...config,
                   devices: [
                     ...config.devices.filter((d) => d.id !== editing.id),
-                    editing,
+                    kind(editing) === "camera"
+                      ? editing
+                      : { ...editing, ndi_source: undefined },
                   ],
                 });
                 setEditing(undefined);
@@ -1751,13 +1783,15 @@ function Devices({
                             }
                           : e.target.value === "atem"
                             ? { type: "atem", address: "192.168.1.240" }
-                            : {
-                                type: "simulation",
-                                kind:
-                                  e.target.value === "sim_camera"
-                                    ? "camera"
-                                    : "atem",
-                              },
+                            : e.target.value === "ndi"
+                              ? { type: "ndi", source: "" }
+                              : {
+                                  type: "simulation",
+                                  kind:
+                                    e.target.value === "sim_camera"
+                                      ? "camera"
+                                      : "atem",
+                                },
                     })
                   }
                 >
@@ -1773,17 +1807,47 @@ function Devices({
                   <NativeSelectOption value="visca">
                     VISCA-IP camera · experimental
                   </NativeSelectOption>
+                  <NativeSelectOption value="ndi">
+                    NDI® camera · experimental
+                  </NativeSelectOption>
                 </NativeSelect>
               </Label>
             </div>
-            {editing.connection.type !== "simulation" && (
+            {editing.connection.type === "ndi" && (
+              <>
+                <NdiSourceField
+                  label="NDI® source"
+                  required
+                  value={editing.connection.source || undefined}
+                  onChange={(source) =>
+                    setEditing({
+                      ...editing,
+                      connection: { type: "ndi", source: source ?? "" },
+                      ndi_source: undefined,
+                    })
+                  }
+                  available={snapshot.ndi.available}
+                  error={snapshot.ndi.error}
+                />
+                <Notice>
+                  NDI PTZ moves the camera and shows its preview, but reports no
+                  position: the app shows the last commanded position, moves
+                  count as done once sent, and absolute moves ignore speed.
+                </Notice>
+              </>
+            )}
+            {(editing.connection.type === "atem" ||
+              editing.connection.type === "visca") && (
               <Label className="my-3 grid items-stretch gap-2 leading-normal">
                 IP address
                 <Input
                   required
                   value={editing.connection.address}
                   onChange={(e) => {
-                    if (editing.connection.type !== "simulation")
+                    if (
+                      editing.connection.type === "atem" ||
+                      editing.connection.type === "visca"
+                    )
                       setEditing({
                         ...editing,
                         connection: {
@@ -1878,6 +1942,32 @@ function Devices({
                 </div>
               </>
             )}
+            {kind(editing) === "camera" &&
+              editing.connection.type !== "ndi" && (
+                <NdiSourceField
+                  value={editing.ndi_source}
+                  onChange={(ndi_source) =>
+                    setEditing({ ...editing, ndi_source })
+                  }
+                  available={snapshot.ndi.available}
+                  error={snapshot.ndi.error}
+                  address={
+                    editing.connection.type === "visca"
+                      ? editing.connection.address
+                      : undefined
+                  }
+                  onUseAddress={
+                    editing.connection.type === "visca"
+                      ? (address) =>
+                          editing.connection.type === "visca" &&
+                          setEditing({
+                            ...editing,
+                            connection: { ...editing.connection, address },
+                          })
+                      : undefined
+                  }
+                />
+              )}
             <Button disabled={disabled} variant="default">
               Save device
             </Button>

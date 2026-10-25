@@ -1,5 +1,6 @@
 pub mod adapter;
 pub mod atem;
+pub mod ndi;
 pub mod visca;
 use adapter::{Adapter, Simulated};
 use control_core::*;
@@ -28,6 +29,7 @@ pub struct Controller {
     active: Mutex<Option<(String, CancellationToken)>>,
     runs: Mutex<Vec<Run>>,
     database: PathBuf,
+    ndi: Arc<ndi::Ndi>,
 }
 impl Controller {
     pub async fn open(path: impl AsRef<Path>) -> Result<Arc<Self>> {
@@ -73,6 +75,7 @@ impl Controller {
             active: Mutex::new(None),
             runs: Mutex::new(vec![]),
             database: path,
+            ndi: Arc::default(),
         }))
     }
     pub async fn snapshot(&self) -> Snapshot {
@@ -88,8 +91,47 @@ impl Controller {
             config,
             devices,
             runs: self.runs.lock().await.clone(),
-            ndi_available: false,
+            ndi: self.ndi_snapshot(),
         }
+    }
+    fn ndi_snapshot(&self) -> NdiSnapshot {
+        let (available, error) = self.ndi.status();
+        NdiSnapshot {
+            available,
+            error,
+            previews: if available {
+                self.ndi.previews()
+            } else {
+                vec![]
+            },
+        }
+    }
+    /// NDI sources visible on the network.
+    pub async fn ndi_sources(&self) -> Result<Vec<NdiSource>> {
+        let ndi = self.ndi.clone();
+        tokio::task::spawn_blocking(move || ndi.sources())
+            .await
+            .map_err(|e| Error::Device(e.to_string()))?
+    }
+    /// The latest low-resolution JPEG from a camera's NDI source, if a frame
+    /// has arrived yet. Reading keeps the preview receiver connected.
+    pub async fn ndi_preview(&self, device_id: &str) -> Result<Option<Arc<Vec<u8>>>> {
+        let source = {
+            let config = self.config.read().await;
+            let device = config
+                .devices
+                .iter()
+                .find(|d| d.id == device_id)
+                .ok_or_else(|| Error::Invalid("Unknown device".into()))?;
+            match &device.connection {
+                Connection::Ndi { source } => source.clone(),
+                _ => device
+                    .ndi_source
+                    .clone()
+                    .ok_or_else(|| Error::Invalid("Device has no NDI source".into()))?,
+            }
+        };
+        self.ndi.frame(device_id, &source)
     }
     pub async fn save_config(&self, config: Config) -> Result<()> {
         let _operation = self.operation.lock().await;
@@ -218,7 +260,11 @@ impl Controller {
                 // Establish a camera route using read-only inquiries before
                 // any switcher or motion action in the macro can be sent.
                 let lazy_visca = config.devices.iter().any(|d| {
-                    d.id == action.device_id && matches!(d.connection, Connection::Visca { .. })
+                    d.id == action.device_id
+                        && matches!(
+                            d.connection,
+                            Connection::Visca { .. } | Connection::Ndi { .. }
+                        )
                 });
                 if lazy_visca && probed.insert(action.device_id.clone()) {
                     tokio::time::timeout(
@@ -360,6 +406,7 @@ impl Controller {
         for adapter in self.adapters.read().await.values() {
             let _ = tokio::time::timeout(std::time::Duration::from_secs(2), adapter.close()).await;
         }
+        self.ndi.close();
     }
 }
 async fn wait(ms: u32, token: &CancellationToken) -> Result<()> {
@@ -383,6 +430,7 @@ fn build_adapter(device: &Device) -> Arc<dyn Adapter> {
         Connection::Simulation { .. } => Arc::new(Simulated::new(device)),
         Connection::Visca { .. } => Arc::new(visca::Visca::new(device.clone())),
         Connection::Atem { .. } => Arc::new(atem::Atem::new(device)),
+        Connection::Ndi { source } => Arc::new(ndi::NdiCamera::new(&device.id, source)),
     }
 }
 
