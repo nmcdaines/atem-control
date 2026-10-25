@@ -33,6 +33,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Notice } from "@/components/notice";
+import { Combobox } from "@/components/combobox";
 import { Status } from "@/components/status";
 import { DeviceDock, homeCamera } from "@/components/device-dock";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -1482,12 +1483,20 @@ function Shortcuts({
               <Label className="sr-only" htmlFor={`slot-${current}-${slot}`}>
                 Assign slot {slot + 1}
               </Label>
-              <NativeSelect
+              <Combobox
                 id={`slot-${current}-${slot}`}
                 disabled={disabled}
                 value={mac?.id ?? ""}
-                onChange={(event) => {
-                  const macroId = event.target.value;
+                placeholder="Assign a macro"
+                clearLabel="Unassign"
+                searchPlaceholder="Search macros…"
+                options={config.macros.map((item) => ({
+                  value: item.id,
+                  label: item.name,
+                  hint: `${item.steps.length} steps`,
+                  keywords: item.description,
+                }))}
+                onChange={(macroId) => {
                   void task(() =>
                     save({
                       ...config,
@@ -1509,14 +1518,7 @@ function Shortcuts({
                     }),
                   );
                 }}
-              >
-                <NativeSelectOption value="">Assign a macro</NativeSelectOption>
-                {config.macros.map((item) => (
-                  <NativeSelectOption key={item.id} value={item.id}>
-                    {item.name}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+              />
             </Card>
           );
         })}

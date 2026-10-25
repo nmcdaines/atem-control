@@ -93,9 +93,15 @@ test("saves an observed camera preset and assigns it to a shortcut", async ({
   await page.getByLabel("Save observed position").fill("Wide shot");
   await page.getByRole("button", { name: "Save preset", exact: true }).click();
   await page.getByRole("button", { name: "Shortcuts", exact: true }).click();
-  await page
-    .getByLabel("Assign slot 2", { exact: true })
-    .selectOption({ label: "Wide shot" });
+  await page.getByLabel("Assign slot 2", { exact: true }).click();
+  const search = page.getByRole("searchbox", { name: "Search macros…" });
+  await search.fill("wide");
+  const listbox = page.getByRole("listbox");
+  await expect(listbox.getByRole("option")).toHaveCount(1);
+  await search.fill("nothing like this");
+  await expect(listbox.getByText("No matches")).toBeVisible();
+  await search.fill("WIDE");
+  await search.press("Enter");
   await expect(page.locator(".shortcut").nth(1).getByRole("button")).toHaveText(
     /Wide shot/,
   );
@@ -103,6 +109,11 @@ test("saves an observed camera preset and assigns it to a shortcut", async ({
   await page.getByRole("button", { name: "Shortcuts", exact: true }).click();
   await expect(page.locator(".shortcut").nth(1).getByRole("button")).toHaveText(
     /Wide shot/,
+  );
+  await page.getByLabel("Assign slot 2", { exact: true }).click();
+  await page.getByRole("option", { name: "Unassign" }).click();
+  await expect(page.locator(".shortcut").nth(1).getByRole("button")).toHaveText(
+    "Unassigned",
   );
 });
 
@@ -241,9 +252,10 @@ test("shortcut pagination stays below the grid and preserves page assignments", 
   await expect(
     page.getByRole("heading", { name: "Shortcut page 2", exact: true }),
   ).toBeVisible();
+  await page.getByLabel("Assign slot 2", { exact: true }).click();
   await page
-    .getByLabel("Assign slot 2", { exact: true })
-    .selectOption(baseline.macros[0].id);
+    .getByRole("option", { name: new RegExp(baseline.macros[0].name) })
+    .click();
   await expect(page.locator(".shortcut").nth(1).getByRole("button")).toHaveText(
     new RegExp(baseline.macros[0].name),
   );
