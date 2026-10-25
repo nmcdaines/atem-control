@@ -4,7 +4,7 @@ import { Crosshair, MoveHorizontal, MoveVertical, ZoomIn } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { clamp, frameFor, targetAt } from "@/lib/ptz";
+import { adjustZoom, clamp, frameFor, targetAt } from "@/lib/ptz";
 import type { PtzLimits, PtzPosition } from "@/lib/ptz";
 
 export function PtzPositionControl({
@@ -21,6 +21,41 @@ export function PtzPositionControl({
   onChange: (position: PtzPosition) => void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  // Several pointer or wheel events can arrive before a re-render, so each
+  // change builds on the latest value rather than the rendered prop.
+  const latest = useRef(target);
+  latest.current = target;
+  const change = (position: PtzPosition) => {
+    latest.current = position;
+    onChange(position);
+  };
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ distance: number; zoom: number } | null>(null);
+  const spread = () => {
+    const [a, b] = [...pointers.current.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+  const live = useRef({ disabled, limit: limits.zoom, change });
+  live.current = { disabled, limit: limits.zoom, change };
+  useEffect(() => {
+    const element = canvas.current;
+    if (!element) return;
+    // React registers wheel listeners as passive, which can't stop page scroll.
+    const wheel = (event: WheelEvent) => {
+      if (live.current.disabled) return;
+      event.preventDefault();
+      const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
+      // Trackpad pinch arrives as ctrl+wheel with much smaller deltas.
+      const fraction = -pixels / (event.ctrlKey ? 200 : 1000);
+      const position = latest.current;
+      live.current.change({
+        ...position,
+        zoom: adjustZoom(position.zoom, fraction, live.current.limit),
+      });
+    };
+    element.addEventListener("wheel", wheel, { passive: false });
+    return () => element.removeEventListener("wheel", wheel);
+  }, []);
   const [size, setSize] = useState({ width: 640, height: 360 });
   useEffect(() => {
     if (!canvas.current) return;
@@ -93,8 +128,8 @@ export function PtzPositionControl({
 
   function point(event: PointerEvent<HTMLCanvasElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
-    onChange({
-      ...target,
+    change({
+      ...latest.current,
       ...targetAt(
         event.clientX - rect.left,
         event.clientY - rect.top,
@@ -103,6 +138,13 @@ export function PtzPositionControl({
         rect.height,
       ),
     });
+  }
+  function release(event: PointerEvent<HTMLCanvasElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    pointers.current.delete(event.pointerId);
+    // The remaining finger after a pinch shouldn't snap the frame to itself.
+    if (!pointers.current.size) pinch.current = null;
   }
   function key(event: KeyboardEvent<HTMLCanvasElement>) {
     if (
@@ -114,7 +156,7 @@ export function PtzPositionControl({
     const multiplier = event.shiftKey ? 10 : 1;
     const panStep = Math.max(1, Math.round(limits.pan / 100)) * multiplier;
     const tiltStep = Math.max(1, Math.round(limits.tilt / 100)) * multiplier;
-    onChange({
+    change({
       ...target,
       pan: clamp(
         target.pan +
@@ -166,7 +208,7 @@ export function PtzPositionControl({
           <canvas
             ref={canvas}
             role="img"
-            aria-label={`PTZ target map: X ${target.pan}, Y ${target.tilt}, zoom ${target.zoom}. Arrow keys adjust position; Shift moves faster.`}
+            aria-label={`PTZ target map: X ${target.pan}, Y ${target.tilt}, zoom ${target.zoom}. Arrow keys adjust position; Shift moves faster. Scroll or pinch to zoom.`}
             tabIndex={disabled ? -1 : 0}
             aria-disabled={disabled}
             className="absolute inset-0 h-full w-full touch-none cursor-crosshair outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
@@ -176,19 +218,46 @@ export function PtzPositionControl({
               event.preventDefault();
               event.currentTarget.focus();
               event.currentTarget.setPointerCapture(event.pointerId);
-              point(event);
+              pointers.current.set(event.pointerId, {
+                x: event.clientX,
+                y: event.clientY,
+              });
+              if (pointers.current.size === 2) {
+                pinch.current = {
+                  distance: spread(),
+                  zoom: latest.current.zoom,
+                };
+              } else if (pointers.current.size === 1) {
+                point(event);
+              }
             }}
             onPointerMove={(event) => {
               if (
-                !disabled &&
-                event.currentTarget.hasPointerCapture(event.pointerId)
+                disabled ||
+                !event.currentTarget.hasPointerCapture(event.pointerId)
               )
+                return;
+              pointers.current.set(event.pointerId, {
+                x: event.clientX,
+                y: event.clientY,
+              });
+              if (pinch.current && pointers.current.size === 2) {
+                // Doubling the finger spread zooms in by half the range.
+                const ratio = spread() / Math.max(1, pinch.current.distance);
+                change({
+                  ...latest.current,
+                  zoom: adjustZoom(
+                    pinch.current.zoom,
+                    Math.log2(Math.max(ratio, 0.01)) / 2,
+                    limits.zoom,
+                  ),
+                });
+              } else if (!pinch.current) {
                 point(event);
+              }
             }}
-            onPointerUp={(event) => {
-              if (event.currentTarget.hasPointerCapture(event.pointerId))
-                event.currentTarget.releasePointerCapture(event.pointerId);
-            }}
+            onPointerUp={release}
+            onPointerCancel={release}
           >
             Target X {target.pan}, Y {target.tilt}, zoom {target.zoom}.
           </canvas>
@@ -207,7 +276,7 @@ export function PtzPositionControl({
             step={1}
             value={[target.tilt]}
             disabled={disabled}
-            onValueChange={([tilt]) => onChange({ ...target, tilt })}
+            onValueChange={([tilt]) => change({ ...target, tilt })}
           />
           <span className="text-[10px] text-muted-foreground">Y</span>
         </div>
@@ -229,7 +298,7 @@ export function PtzPositionControl({
             step={1}
             value={[target.pan]}
             disabled={disabled}
-            onValueChange={([pan]) => onChange({ ...target, pan })}
+            onValueChange={([pan]) => change({ ...target, pan })}
           />
         </div>
         <div className="space-y-3">
@@ -249,13 +318,14 @@ export function PtzPositionControl({
             step={1}
             value={[target.zoom]}
             disabled={disabled}
-            onValueChange={([zoom]) => onChange({ ...target, zoom })}
+            onValueChange={([zoom]) => change({ ...target, zoom })}
           />
         </div>
       </div>
       <p className="mt-4 mb-1 text-[11px] text-muted-foreground">
-        Click or drag to set X/Y, then apply the target below. Frame size shows
-        relative zoom; optical field of view is uncalibrated.
+        Click, drag or touch to set X/Y; scroll or pinch to zoom. Then apply the
+        target below. Frame size shows relative zoom; optical field of view is
+        uncalibrated.
       </p>
     </section>
   );

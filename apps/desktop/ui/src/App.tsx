@@ -817,9 +817,47 @@ function Camera({
                 onChange={(tilt_speed) => setTarget({ ...target, tilt_speed })}
               />
             </div>
-            <Button disabled={disabled} variant="outline">
-              Move to position
-            </Button>
+            <div className="button-row">
+              <Button disabled={disabled} variant="outline">
+                Move to position
+              </Button>
+              {/* VISCA moves pan and tilt together, so a single-axis move
+                  holds the other axis at its observed position. */}
+              <Button
+                type="button"
+                disabled={disabled || !current}
+                variant="outline"
+                onClick={() =>
+                  current &&
+                  send({
+                    type: "pan_tilt",
+                    pan: target.pan,
+                    tilt: current.tilt,
+                    pan_speed: target.pan_speed,
+                    tilt_speed: target.tilt_speed,
+                  })
+                }
+              >
+                Pan only
+              </Button>
+              <Button
+                type="button"
+                disabled={disabled || !current}
+                variant="outline"
+                onClick={() =>
+                  current &&
+                  send({
+                    type: "pan_tilt",
+                    pan: current.pan,
+                    tilt: target.tilt,
+                    pan_speed: target.pan_speed,
+                    tilt_speed: target.tilt_speed,
+                  })
+                }
+              >
+                Tilt only
+              </Button>
+            </div>
           </form>
           <form
             onSubmit={(e) => {

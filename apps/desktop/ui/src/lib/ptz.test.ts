@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { frameFor, targetAt } from "./ptz";
+import { adjustZoom, frameFor, targetAt } from "./ptz";
 const limits = { pan: 1000, tilt: 500, zoom: 16384 };
 describe("PTZ framing map", () => {
   it("shrinks with zoom without moving its center", () => {
@@ -42,5 +42,10 @@ describe("PTZ framing map", () => {
       pan: 1000,
       tilt: 500,
     });
+  });
+  it("adjusts zoom by a fraction of its range within bounds", () => {
+    expect(adjustZoom(8000, 0.1, 16384)).toBe(9638);
+    expect(adjustZoom(16000, 0.5, 16384)).toBe(16384);
+    expect(adjustZoom(100, -0.5, 16384)).toBe(0);
   });
 });

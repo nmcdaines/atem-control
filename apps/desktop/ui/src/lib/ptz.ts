@@ -53,3 +53,8 @@ export function targetAt(
     ),
   };
 }
+
+// Shifts zoom by a fraction of its full range, e.g. 0.1 zooms in 10%.
+export function adjustZoom(zoom: number, fraction: number, limit: number) {
+  return Math.round(clamp(zoom + fraction * limit, 0, limit));
+}

@@ -360,6 +360,59 @@ test("PTZ sliders and canvas edit a draft until movement and zoom are applied", 
       (device) => device.device_id === "demo-camera",
     )!.camera!.pan,
   ).toBe(32767);
+  // Single-axis moves keep the other axis at its observed position.
+  const camera = async () =>
+    (await snapshot()).devices.find(
+      (device) => device.device_id === "demo-camera",
+    )!.camera;
+  await page.getByLabel("Target pan", { exact: true }).fill("100");
+  await page.getByLabel("Target tilt", { exact: true }).fill("200");
+  await page.getByRole("button", { name: "Pan only", exact: true }).click();
+  await expect.poll(camera).toEqual({ pan: 100, tilt: -32767, zoom: 16384 });
+  await page.getByRole("button", { name: "Tilt only", exact: true }).click();
+  await expect.poll(camera).toEqual({ pan: 100, tilt: 200, zoom: 16384 });
+  const targetZoom = () =>
+    page
+      .getByRole("slider", { name: "Target zoom", exact: true })
+      .getAttribute("aria-valuenow")
+      .then(Number);
+  await canvas.hover();
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+  await page.mouse.wheel(0, 500);
+  await expect.poll(targetZoom).toBe(8192);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
+  await page.mouse.wheel(0, -250);
+  await expect.poll(targetZoom).toBe(12288);
+  // Pinch out with two real touch points: doubling the spread adds half the range.
+  const touch = await page.context().newCDPSession(page);
+  await touch.send("Emulation.setTouchEmulationEnabled", {
+    enabled: true,
+    maxTouchPoints: 2,
+  });
+  const pinchBox = (await canvas.boundingBox())!;
+  const cx = pinchBox.x + pinchBox.width / 2,
+    cy = pinchBox.y + pinchBox.height / 2;
+  const fingers = (spread: number) => [
+    { x: cx - spread, y: cy, id: 0 },
+    { x: cx + spread, y: cy, id: 1 },
+  ];
+  await zoom.focus();
+  await zoom.press("Home");
+  await expect.poll(targetZoom).toBe(0);
+  await touch.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: fingers(20),
+  });
+  await touch.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: fingers(40),
+  });
+  await touch.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await expect.poll(targetZoom).toBe(8192);
+  await touch.detach();
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: "../../../.local/ptz-shadcn.png",
