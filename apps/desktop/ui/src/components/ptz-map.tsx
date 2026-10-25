@@ -9,13 +9,15 @@ import { adjustZoom, clamp } from "@/lib/ptz";
 import {
   clampToLimits,
   frameRect,
+  fromView,
   layout,
   mapExtent,
   rangeFromCorners,
   rangeRect,
+  toView,
   withinLimits,
 } from "@/lib/ptz-map";
-import type { Position } from "@/lib/ptz-map";
+import type { Limits, Position } from "@/lib/ptz-map";
 import type {
   CameraCalibration,
   CameraState,
@@ -58,15 +60,23 @@ export function PtzMap({
   target: Position;
   onChange: (target: Position) => void;
   preview?: ImageBitmap | null;
-  limits?: PtzRange | null;
-  onSaveLimits: (limits: PtzRange | null) => void;
+  limits: Limits;
+  /** Saves a rectangle or a polygon; both null clears the limits. */
+  onSaveLimits: (limits: Limits) => void;
   zoomLimit: number;
   disabled: boolean;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [width, setWidth] = useState(640);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<"rect" | "polygon" | null>(null);
   const [draft, setDraft] = useState<{ from: Point; to: Point } | null>(null);
+  const [outline, setOutline] = useState<Point[]>([]);
+  const hasLimits = !!(limits.rect || limits.polygon?.length);
+  const stopEditing = () => {
+    setDraft(null);
+    setOutline([]);
+    setEditing(null);
+  };
   const extent = mapExtent(calibration, range, panorama);
   const aspect = (extent.right - extent.left) / (extent.top - extent.bottom);
   const height = Math.round(clamp(width / aspect, MIN_HEIGHT, MAX_HEIGHT));
@@ -147,17 +157,30 @@ export function PtzMap({
           context.stroke();
         }
       }
-      if (limits) {
-        const area = map.rect(rangeRect(calibration, limits));
+      // Shade everything outside the allowed area.
+      const allowedArea = new Path2D();
+      if (limits.polygon?.length) {
+        limits.polygon.forEach((p, i) => {
+          const v = toView(calibration, p.pan, p.tilt);
+          const px = map.toPx(v.x, v.y);
+          if (i) allowedArea.lineTo(px.x, px.y);
+          else allowedArea.moveTo(px.x, px.y);
+        });
+        allowedArea.closePath();
+      } else if (limits.rect) {
+        const area = map.rect(rangeRect(calibration, limits.rect));
+        allowedArea.rect(area.x, area.y, area.width, area.height);
+      }
+      if (limits.polygon?.length || limits.rect) {
+        const shade = new Path2D();
+        shade.rect(0, 0, width, height);
+        shade.addPath(allowedArea);
         context.fillStyle = "rgba(0, 0, 0, 0.55)";
-        context.beginPath();
-        context.rect(0, 0, width, height);
-        context.rect(area.x, area.y, area.width, area.height);
-        context.fill("evenodd");
+        context.fill(shade, "evenodd");
         context.strokeStyle = "#fbbf24";
         context.setLineDash([6, 4]);
         context.lineWidth = 1.5;
-        context.strokeRect(area.x, area.y, area.width, area.height);
+        context.stroke(allowedArea);
         context.setLineDash([]);
       }
       if (shown.current) {
@@ -192,6 +215,34 @@ export function PtzMap({
       context.moveTo(centre.x, centre.y - 6);
       context.lineTo(centre.x, centre.y + 6);
       context.stroke();
+      if (outline.length) {
+        context.strokeStyle = "#fbbf24";
+        context.fillStyle = "#fbbf24";
+        context.lineWidth = 2;
+        context.beginPath();
+        outline.forEach((point, i) => {
+          const px = map.toPx(point.x, point.y);
+          if (i) context.lineTo(px.x, px.y);
+          else context.moveTo(px.x, px.y);
+        });
+        context.stroke();
+        if (outline.length >= 3) {
+          // The closing edge that saving will add.
+          const [first, last] = [outline[0], outline[outline.length - 1]];
+          const a = map.toPx(last.x, last.y);
+          const b = map.toPx(first.x, first.y);
+          context.setLineDash([4, 4]);
+          context.beginPath();
+          context.moveTo(a.x, a.y);
+          context.lineTo(b.x, b.y);
+          context.stroke();
+          context.setLineDash([]);
+        }
+        for (const point of outline) {
+          const px = map.toPx(point.x, point.y);
+          context.fillRect(px.x - 3, px.y - 3, 6, 6);
+        }
+      }
       if (draft) {
         const a = map.toPx(draft.from.x, draft.from.y);
         const b = map.toPx(draft.to.x, draft.to.y);
@@ -210,7 +261,7 @@ export function PtzMap({
     return () => cancelAnimationFrame(frame);
     // Snapshots arrive as new objects several times a second, so the loop is
     // keyed on content; `map` and `extent` derive from these inputs.
-  }, [width, height, geometry, draft]);
+  }, [width, height, geometry, draft, outline]);
 
   // Wheel zoom, registered non-passively so the page doesn't scroll.
   const live = useRef({ disabled, editing, change, zoomLimit });
@@ -306,17 +357,61 @@ export function PtzMap({
           </Badge>
           {editing ? (
             <>
+              <div
+                role="group"
+                aria-label="Limit shape"
+                className="flex rounded-md border"
+              >
+                {(["rect", "polygon"] as const).map((shape) => (
+                  <Button
+                    key={shape}
+                    type="button"
+                    size="xs"
+                    variant={editing === shape ? "secondary" : "ghost"}
+                    aria-pressed={editing === shape}
+                    onClick={() => {
+                      setDraft(null);
+                      setOutline([]);
+                      setEditing(shape);
+                    }}
+                  >
+                    {shape === "rect" ? "Rectangle" : "Polygon"}
+                  </Button>
+                ))}
+              </div>
+              {editing === "polygon" && (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  disabled={!outline.length}
+                  onClick={() => setOutline(outline.slice(0, -1))}
+                >
+                  Undo point
+                </Button>
+              )}
               <Button
                 type="button"
                 size="xs"
-                disabled={!draft}
+                disabled={editing === "rect" ? !draft : outline.length < 3}
                 onClick={() => {
-                  if (draft)
-                    onSaveLimits(
-                      rangeFromCorners(calibration, draft.from, draft.to),
-                    );
-                  setDraft(null);
-                  setEditing(false);
+                  if (editing === "rect" && draft)
+                    onSaveLimits({
+                      rect: rangeFromCorners(calibration, draft.from, draft.to),
+                      polygon: null,
+                    });
+                  if (editing === "polygon")
+                    onSaveLimits({
+                      rect: null,
+                      polygon: outline.map((point) => {
+                        const raw = fromView(calibration, point.x, point.y);
+                        return {
+                          pan: Math.round(raw.pan),
+                          tilt: Math.round(raw.tilt),
+                        };
+                      }),
+                    });
+                  stopEditing();
                 }}
               >
                 Save limits
@@ -325,10 +420,7 @@ export function PtzMap({
                 type="button"
                 size="xs"
                 variant="outline"
-                onClick={() => {
-                  setDraft(null);
-                  setEditing(false);
-                }}
+                onClick={stopEditing}
               >
                 Cancel
               </Button>
@@ -340,18 +432,20 @@ export function PtzMap({
                 size="xs"
                 variant="outline"
                 disabled={disabled}
-                onClick={() => setEditing(true)}
+                onClick={() =>
+                  setEditing(limits.polygon?.length ? "polygon" : "rect")
+                }
               >
                 <ShieldCheck aria-hidden />
-                {limits ? "Edit limits" : "Set limits"}
+                {hasLimits ? "Edit limits" : "Set limits"}
               </Button>
-              {limits && (
+              {hasLimits && (
                 <Button
                   type="button"
                   size="xs"
                   variant="outline"
                   disabled={disabled}
-                  onClick={() => onSaveLimits(null)}
+                  onClick={() => onSaveLimits({ rect: null, polygon: null })}
                 >
                   Clear limits
                 </Button>
@@ -368,7 +462,7 @@ export function PtzMap({
             observed
               ? `; camera at pan ${observed.pan}, tilt ${observed.tilt}, zoom ${observed.zoom}`
               : ""
-          }. ${editing ? "Drag to draw the allowed area." : "Click or drag to aim; scroll or pinch to zoom; arrow keys adjust."}`}
+          }. ${editing === "polygon" ? "Click to add corners of the allowed area." : editing ? "Drag to draw the allowed area." : "Click or drag to aim; scroll or pinch to zoom; arrow keys adjust."}`}
           tabIndex={disabled ? -1 : 0}
           aria-disabled={disabled}
           style={{ height }}
@@ -380,6 +474,10 @@ export function PtzMap({
             event.currentTarget.focus();
             event.currentTarget.setPointerCapture(event.pointerId);
             const point = at(event);
+            if (editing === "polygon") {
+              if (outline.length < 64) setOutline([...outline, point]);
+              return;
+            }
             if (editing) {
               setDraft({ from: point, to: point });
               return;
@@ -401,11 +499,12 @@ export function PtzMap({
               !event.currentTarget.hasPointerCapture(event.pointerId)
             )
               return;
-            if (editing) {
+            if (editing === "rect") {
               const point = at(event);
               setDraft((d) => d && { ...d, to: point });
               return;
             }
+            if (editing) return;
             pointers.current.set(event.pointerId, {
               x: event.clientX,
               y: event.clientY,
@@ -448,9 +547,11 @@ export function PtzMap({
       </div>
       <p className="mt-3 mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <Scan className="size-3.5" />
-        {editing
-          ? "Drag across the map to draw the area the camera may show, then save."
-          : "Click or drag to aim, scroll or pinch to zoom, then apply the target. The green box follows the camera."}
+        {editing === "polygon"
+          ? "Click around the area the camera may show, one corner at a time, then save."
+          : editing
+            ? "Drag across the map to draw the area the camera may show, then save."
+            : "Click or drag to aim, scroll or pinch to zoom, then apply the target. The green box follows the camera."}
       </p>
     </section>
   );

@@ -114,7 +114,7 @@ pub fn import_legacy(json: &str) -> Result<ImportReport> {
             }
             other => return Err(Error::Invalid(format!("Unknown legacy device type {other}"))),
         };
-        Ok(Device { id: d.id, name: d.name, connection, ndi_source: None, ptz_range: None, calibration: None, soft_limits: None })
+        Ok(Device { id: d.id, name: d.name, connection, ndi_source: None, ptz_range: None, calibration: None, soft_limits: None, soft_polygon: None, atem_input: None })
     }).collect::<Result<Vec<_>>>()?;
     let macros = legacy
         .macros

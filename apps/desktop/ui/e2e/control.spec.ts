@@ -678,4 +678,60 @@ test("calibrated camera map aims, draws soft limits and keeps targets inside the
 
   await page.getByRole("button", { name: "Clear limits" }).click();
   await expect.poll(saved).toBeFalsy();
+
+  // An L-shaped polygon: the top-right of the middle third is excluded.
+  await page.getByRole("button", { name: "Set limits" }).click();
+  await page.getByRole("button", { name: "Polygon", exact: true }).click();
+  for (const [x, y] of [
+    [0.3, 0.9],
+    [0.7, 0.9],
+    [0.7, 0.55],
+    [0.5, 0.55],
+    [0.5, 0.1],
+    [0.3, 0.1],
+  ])
+    await map.click({ position: { x: box.width * x, y: box.height * y } });
+  await page.getByRole("button", { name: "Save limits" }).click();
+  const polygon = async () =>
+    (
+      (await (
+        await request.get("http://127.0.0.1:3849/api/snapshot")
+      ).json()) as Snapshot
+    ).config.devices.find((d) => d.id === "demo-camera")!.soft_polygon;
+  await expect.poll(async () => (await polygon())?.length).toBe(6);
+  // Zoom in so a frame fits, then aim into the excluded corner.
+  await page.getByRole("slider", { name: "Target zoom", exact: true }).focus();
+  await page.keyboard.press("End");
+  await map.click({ position: { x: box.width * 0.65, y: box.height * 0.2 } });
+  const corner = await target();
+  const points = (await polygon())!;
+  const pans = points.map((p) => p.pan).sort((a, b) => a - b);
+  // The excluded corner lies right of the notch's inner edge and above it.
+  const innerPan = pans[2];
+  const innerTilt = points.map((p) => p.tilt).sort((a, b) => a - b)[2];
+  expect(corner.pan <= innerPan || corner.tilt <= innerTilt).toBe(true);
+  await page.getByRole("button", { name: "Clear limits" }).click();
+  await expect.poll(polygon).toBeFalsy();
+});
+
+test("a camera's switcher input shows on-air and preview status", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Devices", exact: true }).click();
+  await page.getByRole("button", { name: "Edit", exact: true }).nth(1).click();
+  await page.getByLabel("Switcher input (shows on-air status)").fill("2");
+  await page.getByRole("button", { name: "Save device", exact: true }).click();
+  await page.getByRole("button", { name: "Surface", exact: true }).click();
+  const programRow = page.locator(".input-row").first();
+  const previewRow = page.locator(".input-row").nth(1);
+  await programRow.getByRole("button", { name: /^02/ }).click();
+  await page.getByRole("button", { name: "Cameras", exact: true }).click();
+  const card = page.locator(".panel").filter({ hasText: "PTZ CONTROL" });
+  await expect(card.getByText("ON AIR", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Surface", exact: true }).click();
+  await programRow.getByRole("button", { name: /^01/ }).click();
+  await previewRow.getByRole("button", { name: /^02/ }).click();
+  await page.getByRole("button", { name: "Cameras", exact: true }).click();
+  await expect(card.getByText("PREVIEW", { exact: true })).toBeVisible();
+  await expect(card.getByText("ON AIR", { exact: true })).toHaveCount(0);
 });

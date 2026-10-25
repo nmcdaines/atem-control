@@ -103,6 +103,61 @@ pub struct Device {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub soft_limits: Option<PtzRange>,
+    /// A polygon (raw units, in drawing order) the visible frame must stay
+    /// inside, for areas a rectangle can't describe.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub soft_polygon: Option<Vec<PtzPoint>>,
+    /// The switcher input this camera feeds, so it can show when it is on air
+    /// and refuse long moves such as scans while it is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub atem_input: Option<u16>,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, TS)]
+#[serde(deny_unknown_fields)]
+pub struct PtzPoint {
+    pub pan: i16,
+    pub tilt: i16,
+}
+
+/// Whether an axis-aligned rectangle lies entirely inside a simple polygon:
+/// every corner is inside, no polygon vertex is strictly inside the
+/// rectangle, and no polygon edge crosses a rectangle edge.
+pub fn rect_in_polygon(
+    (left, right, bottom, top): (f32, f32, f32, f32),
+    polygon: &[(f32, f32)],
+) -> bool {
+    let inside = |(x, y): (f32, f32)| {
+        let mut odd = false;
+        for (i, &(x1, y1)) in polygon.iter().enumerate() {
+            let (x2, y2) = polygon[(i + 1) % polygon.len()];
+            if (y1 > y) != (y2 > y) && x < x1 + (y - y1) / (y2 - y1) * (x2 - x1) {
+                odd = !odd;
+            }
+        }
+        odd
+    };
+    let corners = [(left, bottom), (right, bottom), (right, top), (left, top)];
+    if !corners.iter().all(|&c| inside(c)) {
+        return false;
+    }
+    if polygon
+        .iter()
+        .any(|&(x, y)| x > left && x < right && y > bottom && y < top)
+    {
+        return false;
+    }
+    let side = |p: (f32, f32), q: (f32, f32), r: (f32, f32)| {
+        (q.0 - p.0) * (r.1 - p.1) - (q.1 - p.1) * (r.0 - p.0)
+    };
+    let cross =
+        |a, b, c, d| side(c, d, a) * side(c, d, b) < 0.0 && side(a, b, c) * side(a, b, d) < 0.0;
+    (0..polygon.len()).all(|i| {
+        let (a, b) = (polygon[i], polygon[(i + 1) % polygon.len()]);
+        (0..4).all(|k| !cross(a, b, corners[k], corners[(k + 1) % 4]))
+    })
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, TS)]
@@ -200,9 +255,9 @@ impl Device {
         command: &Command,
         current: Option<&CameraState>,
     ) -> Result<()> {
-        let Some(limits) = self.soft_limits else {
+        if self.soft_limits.is_none() && self.soft_polygon.is_none() {
             return Ok(());
-        };
+        }
         let (pan, tilt, zoom) = match (command, current) {
             (Command::PanTilt { pan, tilt, .. }, current) => {
                 (*pan, *tilt, current.map_or(0, |c| c.zoom))
@@ -221,9 +276,27 @@ impl Device {
             f32::from(centre) - half >= f32::from(min) - 0.5
                 && f32::from(centre) + half <= f32::from(max) + 0.5
         };
-        if inside(pan, half_pan, limits.pan_min, limits.pan_max)
-            && inside(tilt, half_tilt, limits.tilt_min, limits.tilt_max)
-        {
+        let in_rect = self.soft_limits.is_none_or(|limits| {
+            inside(pan, half_pan, limits.pan_min, limits.pan_max)
+                && inside(tilt, half_tilt, limits.tilt_min, limits.tilt_max)
+        });
+        let in_polygon = self.soft_polygon.as_ref().is_none_or(|points| {
+            let (pan, tilt) = (f32::from(pan), f32::from(tilt));
+            let polygon: Vec<_> = points
+                .iter()
+                .map(|p| (f32::from(p.pan), f32::from(p.tilt)))
+                .collect();
+            rect_in_polygon(
+                (
+                    pan - half_pan,
+                    pan + half_pan,
+                    tilt - half_tilt,
+                    tilt + half_tilt,
+                ),
+                &polygon,
+            )
+        });
+        if in_rect && in_polygon {
             Ok(())
         } else {
             invalid("That shot would show outside the camera's soft limits")
@@ -462,9 +535,15 @@ impl Config {
             if device.ptz_range.is_some_and(|r| !r.valid())
                 || device.soft_limits.is_some_and(|r| !r.valid())
                 || device.calibration.as_ref().is_some_and(|c| !c.valid())
+                || device
+                    .soft_polygon
+                    .as_ref()
+                    .is_some_and(|p| !(3..=64).contains(&p.len()))
                 || ((device.ptz_range.is_some()
                     || device.calibration.is_some()
-                    || device.soft_limits.is_some())
+                    || device.soft_limits.is_some()
+                    || device.soft_polygon.is_some()
+                    || device.atem_input.is_some())
                     && device.connection.kind() != DeviceKind::Camera)
             {
                 return invalid(
@@ -575,6 +654,8 @@ pub fn demo_config() -> Config {
                 ptz_range: None,
                 calibration: None,
                 soft_limits: None,
+                soft_polygon: None,
+                atem_input: None,
             },
             Device {
                 id: "demo-camera".into(),
@@ -586,6 +667,8 @@ pub fn demo_config() -> Config {
                 ptz_range: None,
                 calibration: None,
                 soft_limits: None,
+                soft_polygon: None,
+                atem_input: None,
             },
         ],
         macros: vec![Macro {
@@ -769,6 +852,26 @@ pub struct NdiPreview {
 mod tests {
     use super::*;
     #[test]
+    fn rectangles_must_fit_inside_concave_polygons() {
+        // An L shape: the notch at the top right is outside.
+        let l = [
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 4.0),
+            (4.0, 4.0),
+            (4.0, 10.0),
+            (0.0, 10.0),
+        ];
+        assert!(rect_in_polygon((1.0, 3.0, 1.0, 9.0), &l));
+        assert!(rect_in_polygon((1.0, 9.0, 1.0, 3.0), &l));
+        // Corners can be inside while the notch cuts through the middle.
+        assert!(!rect_in_polygon((1.0, 9.0, 1.0, 9.0), &l));
+        assert!(!rect_in_polygon((5.0, 9.0, 5.0, 9.0), &l));
+        // A polygon vertex poking into the rectangle.
+        assert!(!rect_in_polygon((3.0, 6.0, 2.0, 6.0), &l));
+    }
+
+    #[test]
     fn soft_limits_keep_the_visible_frame_inside_the_region() {
         let mut device = demo_config().devices.remove(1);
         device.soft_limits = Some(PtzRange {
@@ -831,6 +934,34 @@ mod tests {
         // Unknown zoom is treated as widest.
         assert!(device.check_soft_limits(&pan_tilt(600, 0), None).is_err());
         assert!(device.check_soft_limits(&Command::Stop, None).is_ok());
+        // A polygon applies the same way: an L shape whose top-right
+        // quarter is excluded, checked at the narrowest zoom.
+        device.soft_limits = None;
+        let point = |pan, tilt| PtzPoint { pan, tilt };
+        device.soft_polygon = Some(vec![
+            point(-1000, -300),
+            point(1000, -300),
+            point(1000, 0),
+            point(0, 0),
+            point(0, 300),
+            point(-1000, 300),
+        ]);
+        let tele = |pan, tilt| at(pan, tilt, 16384);
+        assert!(
+            device
+                .check_soft_limits(&pan_tilt(-500, 200), Some(&tele(0, 0)))
+                .is_ok()
+        );
+        assert!(
+            device
+                .check_soft_limits(&pan_tilt(500, -200), Some(&tele(0, 0)))
+                .is_ok()
+        );
+        assert!(
+            device
+                .check_soft_limits(&pan_tilt(500, 200), Some(&tele(0, 0)))
+                .is_err()
+        );
     }
     #[test]
     fn rejects_wrong_device_ranges_and_dangling_shortcuts() {

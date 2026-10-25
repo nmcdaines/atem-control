@@ -20,7 +20,17 @@ calibration?: CameraCalibration,
 /**
  * Region (raw units) that the camera's visible frame must stay inside.
  */
-soft_limits?: PtzRange, };
+soft_limits?: PtzRange, 
+/**
+ * A polygon (raw units, in drawing order) the visible frame must stay
+ * inside, for areas a rectangle can't describe.
+ */
+soft_polygon?: Array<PtzPoint>, 
+/**
+ * The switcher input this camera feeds, so it can show when it is on air
+ * and refuse long moves such as scans while it is.
+ */
+atem_input?: number, };
 export type Command = { "type": "set_program", input: number, } | { "type": "set_preview", input: number, } | { "type": "cut" } | { "type": "auto" } | { "type": "set_input_name", input: number, long_name: string, short_name: string, } | { "type": "set_pip", enabled: boolean, source: number, x: number, y: number, size: number, } | { "type": "pan_tilt", pan: number, tilt: number, pan_speed: number, tilt_speed: number, } | { "type": "zoom", position: number, } | { "type": "stop" } | { "type": "refresh" };
 export type Action = { device_id: string, command: Command, delay_ms: number, timeout_ms: number, };
 export type Step = { "type": "action", action: Action, } | { "type": "wait", duration_ms: number, } | { "type": "parallel", actions: Array<Action>, } | { "type": "legacy_parallel", actions: Array<Action>, };
@@ -36,6 +46,7 @@ export type Feedback = "simulated" | "observed" | "commanded" | "unknown";
 export type DeviceState = { device_id: string, status: ConnectionStatus, feedback: Feedback, error: string | null, switcher: SwitcherState | null, camera: CameraState | null, };
 export type RunStatus = "running" | "completed" | "cancelled" | "failed";
 export type Run = { id: string, macro_id: string, name: string, status: RunStatus, completed_steps: number, total_steps: number, error: string | null, };
+export type PtzPoint = { pan: number, tilt: number, };
 export type PtzRange = { pan_min: number, pan_max: number, tilt_min: number, tilt_max: number, };
 export type FocalSample = { zoom: number, focal_px: number, };
 export type CameraCalibration = { 

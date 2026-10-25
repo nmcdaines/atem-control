@@ -254,7 +254,7 @@ impl Controller {
             .iter()
             .find(|d| d.id == device_id)
             .cloned();
-        if let Some(device) = device.filter(|d| d.soft_limits.is_some())
+        if let Some(device) = device.filter(|d| d.soft_limits.is_some() || d.soft_polygon.is_some())
             && matches!(command, Command::PanTilt { .. } | Command::Zoom { .. })
         {
             let adapter = self

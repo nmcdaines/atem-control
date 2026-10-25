@@ -558,6 +558,8 @@ mod tests {
             ptz_range: None,
             calibration: None,
             soft_limits: None,
+            soft_polygon: None,
+            atem_input: None,
         }));
         let moving = adapter.clone();
         let motion = tokio::spawn(async move {
@@ -623,6 +625,8 @@ mod tests {
             ptz_range: None,
             calibration: None,
             soft_limits: None,
+            soft_polygon: None,
+            atem_input: None,
         });
         for (pan, tilt) in [(0x78, 3), (0x12, 3)] {
             tokio::time::timeout(
@@ -681,6 +685,8 @@ mod tests {
             ptz_range: None,
             calibration: None,
             soft_limits: None,
+            soft_polygon: None,
+            atem_input: None,
         }));
         let moving = adapter.clone();
         let motion = tokio::spawn(async move {
@@ -752,6 +758,8 @@ mod tests {
             ptz_range: None,
             calibration: None,
             soft_limits: None,
+            soft_polygon: None,
+            atem_input: None,
         });
         adapter.execute(&Command::Refresh).await.unwrap();
         assert_eq!(
@@ -793,6 +801,8 @@ mod tests {
             ptz_range: None,
             calibration: None,
             soft_limits: None,
+            soft_polygon: None,
+            atem_input: None,
         };
         let adapter = Visca::new(device);
         adapter.execute(&Command::Refresh).await.unwrap();
@@ -857,6 +867,8 @@ mod tests {
             ptz_range: None,
             calibration: None,
             soft_limits: None,
+            soft_polygon: None,
+            atem_input: None,
         });
         adapter.execute(&Command::Refresh).await.unwrap();
         assert_eq!(
@@ -918,6 +930,8 @@ mod tests {
             ptz_range: None,
             calibration: None,
             soft_limits: None,
+            soft_polygon: None,
+            atem_input: None,
         });
         adapter
             .execute(&Command::Zoom { position: 256 })

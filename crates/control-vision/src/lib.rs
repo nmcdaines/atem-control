@@ -289,7 +289,8 @@ pub struct Extent {
 }
 
 /// Projects tiles onto an equirectangular panorama covering `extent` at
-/// `pixels_per_degree`, feathering overlaps. Uncovered areas stay black.
+/// `pixels_per_degree`, matching tile brightness and feathering overlaps.
+/// Uncovered areas stay black.
 pub fn stitch(tiles: &[Tile], extent: Extent, pixels_per_degree: f32) -> Rgb {
     let width = ((extent.right - extent.left) * pixels_per_degree)
         .round()
@@ -299,11 +300,12 @@ pub fn stitch(tiles: &[Tile], extent: Extent, pixels_per_degree: f32) -> Rgb {
         .max(1.0) as usize;
     let mut out = Rgb::new(width, height);
     let cameras: Vec<_> = tiles.iter().map(Camera::new).collect();
+    let gains = gains(tiles, &cameras, extent, pixels_per_degree);
     let mut accumulated = vec![[0f32; 4]; width];
     for y in 0..height {
         let pitch = (extent.top - (y as f32 + 0.5) / pixels_per_degree).to_radians();
         accumulated.fill([0.0; 4]);
-        for (tile, camera) in tiles.iter().zip(&cameras) {
+        for (index, (tile, camera)) in tiles.iter().zip(&cameras).enumerate() {
             // Skip tiles whose vertical coverage cannot include this row.
             if (pitch - camera.pitch).abs() > camera.reach {
                 continue;
@@ -320,7 +322,7 @@ pub fn stitch(tiles: &[Tile], extent: Extent, pixels_per_degree: f32) -> Rgb {
                 // Weight falls to zero at the tile edges so seams blend.
                 let edge = (u.min(w - 1.0 - u) / (w / 2.0)).min(v.min(h - 1.0 - v) / (h / 2.0));
                 let weight = edge.max(1e-3);
-                let [r, g, b] = tile.image.sample(u, v);
+                let [r, g, b] = tile.image.sample(u, v).map(|c| c * gains[index]);
                 total[0] += r * weight;
                 total[1] += g * weight;
                 total[2] += b * weight;
@@ -337,6 +339,100 @@ pub fn stitch(tiles: &[Tile], extent: Extent, pixels_per_degree: f32) -> Rgb {
         }
     }
     out
+}
+
+/// Per-tile brightness gains that make overlapping tiles agree, since each
+/// frame is exposed separately. Minimises, over sampled overlaps, the
+/// squared difference between gained intensities plus a pull towards a gain
+/// of 1 (Brown & Lowe's gain compensation), solved as a linear system.
+fn gains(tiles: &[Tile], cameras: &[Camera], extent: Extent, pixels_per_degree: f32) -> Vec<f32> {
+    let n = tiles.len();
+    // sums[i][j]: total intensity of tile i where it overlaps tile j.
+    let mut sums = vec![vec![0f64; n]; n];
+    let mut counts = vec![vec![0f64; n]; n];
+    let step = 4.0 / pixels_per_degree.max(1e-3);
+    let mut covering = Vec::with_capacity(n);
+    let mut pitch = extent.top;
+    while pitch > extent.bottom {
+        let mut yaw = extent.left;
+        while yaw < extent.right {
+            covering.clear();
+            for (i, (tile, camera)) in tiles.iter().zip(cameras).enumerate() {
+                let Some((u, v)) = camera.project(yaw.to_radians(), pitch.to_radians()) else {
+                    continue;
+                };
+                let (w, h) = (tile.image.width as f32, tile.image.height as f32);
+                if u >= 0.0 && v >= 0.0 && u <= w - 1.0 && v <= h - 1.0 {
+                    let [r, g, b] = tile.image.sample(u, v);
+                    covering.push((i, 0.299 * r + 0.587 * g + 0.114 * b));
+                }
+            }
+            for &(i, intensity) in &covering {
+                for &(j, _) in &covering {
+                    if i != j {
+                        sums[i][j] += f64::from(intensity);
+                        counts[i][j] += 1.0;
+                    }
+                }
+            }
+            yaw += step;
+        }
+        pitch -= step;
+    }
+    // Intensity noise (0–255 units) and allowed gain spread. Brown & Lowe use
+    // a spread of 0.1, which only half-corrects auto-exposure differences
+    // this large; 0.3 corrects them while still anchoring the average at 1.
+    let (noise, spread) = (10f64.powi(2), 0.3f64.powi(2));
+    let mut a = vec![vec![0f64; n]; n];
+    let mut b = vec![0f64; n];
+    for i in 0..n {
+        for j in 0..n {
+            let count = counts[i][j];
+            if i == j || count == 0.0 {
+                continue;
+            }
+            let (mean_i, mean_j) = (sums[i][j] / count, sums[j][i] / count);
+            a[i][i] += count * (mean_i * mean_i / noise + 1.0 / spread);
+            a[i][j] -= count * mean_i * mean_j / noise;
+            b[i] += count / spread;
+        }
+        if a[i][i] == 0.0 {
+            // No overlaps: keep the tile as captured.
+            a[i][i] = 1.0;
+            b[i] = 1.0;
+        }
+    }
+    solve(a, b).map_or(vec![1.0; n], |g| {
+        g.into_iter().map(|g| g.clamp(0.5, 2.0) as f32).collect()
+    })
+}
+
+/// Solves `a x = b` by Gaussian elimination with partial pivoting.
+fn solve(mut a: Vec<Vec<f64>>, mut b: Vec<f64>) -> Option<Vec<f64>> {
+    let n = b.len();
+    for column in 0..n {
+        let pivot =
+            (column..n).max_by(|&x, &y| a[x][column].abs().total_cmp(&a[y][column].abs()))?;
+        if a[pivot][column].abs() < 1e-12 {
+            return None;
+        }
+        a.swap(column, pivot);
+        b.swap(column, pivot);
+        for row in column + 1..n {
+            let factor = a[row][column] / a[column][column];
+            let pivot_row = a[column].clone();
+            for (value, pivot) in a[row].iter_mut().zip(&pivot_row).skip(column) {
+                *value -= factor * pivot;
+            }
+            b[row] -= factor * b[column];
+        }
+    }
+    let mut x = vec![0.0; n];
+    for row in (0..n).rev() {
+        let rest: f64 = (row + 1..n).map(|k| a[row][k] * x[k]).sum();
+        x[row] = (b[row] - rest) / a[row][row];
+    }
+    Some(x)
 }
 
 /// A pinhole camera at a yaw/pitch, for projecting world directions.
@@ -471,46 +567,50 @@ mod tests {
         assert_eq!(image.data, vec![55, 50, 200, 75, 50, 200]);
     }
 
+    const FOCAL: f32 = 300.0;
+    fn world(yaw: f32, pitch: f32) -> u8 {
+        scene(yaw * 8.0, -pitch * 8.0)
+    }
+    /// A 320×180 pinhole view of `world`, its brightness scaled by `gain`.
+    fn render_tile(yaw: f32, pitch: f32, gain: f32) -> Tile {
+        let camera = Camera::new(&Tile {
+            image: Rgb::new(320, 180),
+            yaw,
+            pitch,
+            focal_px: FOCAL,
+        });
+        let mut image = Rgb::new(320, 180);
+        for y in 0..180 {
+            for x in 0..320 {
+                // Inverse of `project`: pixel ray to world yaw/pitch.
+                let (u, v) = (
+                    (x as f32 - camera.centre.0) / FOCAL,
+                    (camera.centre.1 - y as f32) / FOCAL,
+                );
+                let d: [f32; 3] = std::array::from_fn(|i| {
+                    camera.forward[i] + u * camera.right[i] + v * camera.up[i]
+                });
+                let yaw = d[0].atan2(d[2]).to_degrees();
+                let pitch = d[1].atan2((d[0] * d[0] + d[2] * d[2]).sqrt()).to_degrees();
+                let value = (f32::from(world(yaw, pitch)) * gain).min(255.0) as u8;
+                image.data[(y * 320 + x) * 3..][..3].copy_from_slice(&[value; 3]);
+            }
+        }
+        Tile {
+            image,
+            yaw,
+            pitch,
+            focal_px: FOCAL,
+        }
+    }
+
     #[test]
     fn stitched_tiles_reproduce_the_scene_they_were_cut_from() {
-        // Render a world panorama, cut overlapping pinhole tiles out of it,
-        // and check stitching puts their content back in the same place.
-        let focal = 300.0;
-        let world = |yaw: f32, pitch: f32| scene(yaw * 8.0, -pitch * 8.0);
-        let tile = |yaw: f32, pitch: f32| {
-            let camera = Camera::new(&Tile {
-                image: Rgb::new(320, 180),
-                yaw,
-                pitch,
-                focal_px: focal,
-            });
-            let mut image = Rgb::new(320, 180);
-            for y in 0..180 {
-                for x in 0..320 {
-                    // Inverse of `project`: pixel ray to world yaw/pitch.
-                    let (u, v) = (
-                        (x as f32 - camera.centre.0) / focal,
-                        (camera.centre.1 - y as f32) / focal,
-                    );
-                    let d: [f32; 3] = std::array::from_fn(|i| {
-                        camera.forward[i] + u * camera.right[i] + v * camera.up[i]
-                    });
-                    let yaw = d[0].atan2(d[2]).to_degrees();
-                    let pitch = d[1].atan2((d[0] * d[0] + d[2] * d[2]).sqrt()).to_degrees();
-                    let value = world(yaw, pitch);
-                    image.data[(y * 320 + x) * 3..][..3].copy_from_slice(&[value; 3]);
-                }
-            }
-            Tile {
-                image,
-                yaw,
-                pitch,
-                focal_px: focal,
-            }
-        };
+        // Cut overlapping pinhole tiles out of a known world and check
+        // stitching puts their content back in the same place.
         let tiles: Vec<_> = [(-20.0, 0.0), (20.0, 0.0), (-20.0, 25.0), (20.0, 25.0)]
             .into_iter()
-            .map(|(yaw, pitch)| tile(yaw, pitch))
+            .map(|(yaw, pitch)| render_tile(yaw, pitch, 1.0))
             .collect();
         let extent = Extent {
             left: -40.0,
@@ -532,5 +632,28 @@ mod tests {
             }
         }
         assert!(error / count < 6.0, "mean error {}", error / count);
+    }
+
+    #[test]
+    fn brightness_differences_between_tiles_are_evened_out() {
+        // The right tile was exposed 30% brighter.
+        let tiles = [render_tile(-15.0, 0.0, 1.0), render_tile(15.0, 0.0, 1.3)];
+        let extent = Extent {
+            left: -40.0,
+            right: 40.0,
+            top: 15.0,
+            bottom: -15.0,
+        };
+        let cameras: Vec<_> = tiles.iter().map(Camera::new).collect();
+        let gains = gains(&tiles, &cameras, extent, 4.0);
+        assert!(
+            (gains[1] / gains[0] - 1.0 / 1.3).abs() < 0.05,
+            "gains {gains:?}"
+        );
+        // The pull towards 1 keeps overall brightness near the original.
+        assert!(
+            gains.iter().all(|g| (0.7..1.2).contains(g)),
+            "gains {gains:?}"
+        );
     }
 }

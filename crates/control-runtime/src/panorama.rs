@@ -71,14 +71,16 @@ impl Controller {
         let calibration = camera.device.calibration.clone().ok_or_else(|| {
             Error::Invalid("Calibrate the camera before scanning a panorama".into())
         })?;
-        let grid = scan_grid(&camera, &calibration);
+        // The grid depends on the camera's real limits, which may first need
+        // finding, so the step count is an estimate until the scan starts.
+        let estimate = scan_grid(&physical_range(&camera.range, &calibration), &calibration).len();
         let name = format!("Scanning {}", camera.device.name);
         self.start_job(
             name,
-            grid.len() + 2,
+            estimate + 2,
             move |controller, run_id, token| async move {
                 let (info, jpeg, reach) = controller
-                    .scan(&camera, &calibration, &grid, &run_id, &token)
+                    .scan(&camera, &calibration, &run_id, &token)
                     .await?;
                 controller.store_panorama(info, jpeg).await?;
                 if reach != camera.range {
@@ -122,7 +124,35 @@ impl Controller {
         Ok(())
     }
 
+    /// Refuses jobs that would swing a camera around while it is on air.
+    async fn require_off_air(&self, device_id: &str) -> Result<()> {
+        let Some((name, input)) = self
+            .config
+            .read()
+            .await
+            .devices
+            .iter()
+            .find(|d| d.id == device_id)
+            .and_then(|d| Some((d.name.clone(), d.atem_input?)))
+        else {
+            return Ok(());
+        };
+        let snapshot = self.snapshot().await;
+        let on_air = snapshot
+            .devices
+            .iter()
+            .filter_map(|d| d.switcher.as_ref())
+            .any(|switcher| switcher.program == input);
+        if on_air {
+            return Err(Error::Invalid(format!(
+                "{name} is on air (switcher input {input}); cut to another input before moving it"
+            )));
+        }
+        Ok(())
+    }
+
     async fn hybrid_camera(&self, device_id: &str) -> Result<Camera> {
+        self.require_off_air(device_id).await?;
         let config = self.config.read().await;
         let device = config
             .devices
@@ -208,7 +238,7 @@ impl Controller {
                     self.progress(run_id, index + 1).await;
                     continue;
                 };
-                let angle = (f32::from(moved.pan - base.pan) / pan_units).to_radians();
+                let angle = ((f32::from(moved.pan) - f32::from(base.pan)) / pan_units).to_radians();
                 let focal = shift.dx.abs() / angle.abs().tan();
                 directions.get_or_insert((
                     // Content moving left means the view turned right.
@@ -231,9 +261,10 @@ impl Controller {
                         .filter(|s| s.score > 0.6 && s.dy.abs() > 4.0)
                     {
                         let degrees = (shift.dy.abs() / focal).atan().to_degrees();
-                        tilt_units = Some(f32::from((raised.tilt - base.tilt).abs()) / degrees);
+                        let raised_by = f32::from(raised.tilt) - f32::from(base.tilt);
+                        tilt_units = Some(raised_by.abs() / degrees);
                         // Content moving down means the view tilted up.
-                        let up = if shift.dy * f32::from(raised.tilt - base.tilt) > 0.0 { 1 } else { -1 };
+                        let up = if shift.dy * raised_by > 0.0 { 1 } else { -1 };
                         directions = directions.map(|(pan, _)| (pan, up));
                     }
                 }
@@ -294,20 +325,27 @@ impl Controller {
         &self,
         camera: &Camera,
         calibration: &CameraCalibration,
-        grid: &[(i16, i16)],
         run_id: &str,
         token: &CancellationToken,
     ) -> Result<(PanoramaInfo, Vec<u8>, PtzRange)> {
         let stills = self.ndi.stills(&camera.source, FRAME_WIDTH)?;
         let start = self.observe(&camera.device.id).await?;
+        let mut grid = vec![];
         let result = async {
             self.camera_move(camera, Command::Zoom { position: 0 }, token)
                 .await?;
+            let known = if camera.device.ptz_range.is_some() {
+                camera.range
+            } else {
+                self.find_limits(camera, calibration, &start, token).await?
+            };
+            grid = scan_grid(&known, calibration);
+            self.set_total(run_id, grid.len() + 2).await;
             let mut tiles = vec![];
             // The configured range can exceed what the camera allows (this
             // P100's tilt stops near ±30°, not +90°). Moves that stop short
             // reveal the real limits, and grid points beyond them are skipped.
-            let mut reach = camera.range;
+            let mut reach = known;
             let mut captured: Vec<(i16, i16)> = vec![];
             let (view_pan, view_tilt) = calibration.view_units(0);
             for (index, (pan, tilt)) in grid.iter().enumerate() {
@@ -316,8 +354,8 @@ impl Controller {
                     (*tilt).clamp(reach.tilt_min, reach.tilt_max),
                 );
                 let duplicate = captured.iter().any(|(p, t)| {
-                    f32::from((p - target.0).abs()) < view_pan / 4.0
-                        && f32::from((t - target.1).abs()) < view_tilt / 4.0
+                    (f32::from(*p) - f32::from(target.0)).abs() < view_pan / 4.0
+                        && (f32::from(*t) - f32::from(target.1)).abs() < view_tilt / 4.0
                 });
                 if duplicate {
                     self.progress(run_id, index + 1).await;
@@ -474,7 +512,9 @@ impl Controller {
         // The P100 stops a unit short (towards zero), so repeated jobs would
         // creep. Aim past the target by the miss, once.
         if (end.pan, end.tilt) != (start.pan, start.tilt) {
-            let overshoot = |target: i16, landed: i16| target.saturating_add(target - landed);
+            let overshoot = |target: i16, landed: i16| {
+                (2 * i32::from(target) - i32::from(landed)).clamp(-32767, 32767) as i16
+            };
             self.absolute(
                 id,
                 &pan_tilt(
@@ -486,8 +526,8 @@ impl Controller {
             end = self.observed(id).await?;
         }
         // Tilt can land one unit away from its target on the P100.
-        if (end.pan - start.pan).abs() > 2
-            || (end.tilt - start.tilt).abs() > 2
+        if (i32::from(end.pan) - i32::from(start.pan)).abs() > 2
+            || (i32::from(end.tilt) - i32::from(start.tilt)).abs() > 2
             || end.zoom.abs_diff(start.zoom) > 16
         {
             return Err(Error::Device(format!(
@@ -496,6 +536,36 @@ impl Controller {
             )));
         }
         Ok(())
+    }
+
+    /// Finds where the camera actually stops at each end of its range by
+    /// moving there, starting from the profile limits capped to what any
+    /// camera can do (±180° pan, ±90° tilt).
+    async fn find_limits(
+        &self,
+        camera: &Camera,
+        calibration: &CameraCalibration,
+        start: &CameraState,
+        token: &CancellationToken,
+    ) -> Result<PtzRange> {
+        let mut range = physical_range(&camera.range, calibration);
+        for (pan, tilt) in [
+            (range.pan_max, start.tilt),
+            (range.pan_min, start.tilt),
+            (start.pan, range.tilt_max),
+            (start.pan, range.tilt_min),
+        ] {
+            let at = self.camera_move(camera, pan_tilt(pan, tilt), token).await?;
+            discover_limit(&mut range.pan_min, &mut range.pan_max, pan, at.pan);
+            discover_limit(&mut range.tilt_min, &mut range.tilt_max, tilt, at.tilt);
+        }
+        Ok(range)
+    }
+
+    async fn set_total(&self, run_id: &str, total: usize) {
+        if let Some(run) = self.runs.lock().await.iter_mut().find(|r| r.id == run_id) {
+            run.total_steps = total;
+        }
     }
 
     async fn progress(&self, run_id: &str, completed: usize) {
@@ -542,10 +612,11 @@ fn units_at(calibration: &CameraCalibration, yaw: f32, pitch: f32) -> (f32, f32)
 
 /// Camera centre positions covering the whole range at the widest zoom,
 /// in a back-and-forth order that keeps moves short.
-fn scan_grid(camera: &Camera, calibration: &CameraCalibration) -> Vec<(i16, i16)> {
+fn scan_grid(range: &PtzRange, calibration: &CameraCalibration) -> Vec<(i16, i16)> {
     let (view_pan, view_tilt) = calibration.view_units(0);
     let axis = |min: i16, max: i16, view: f32| {
-        let span = f32::from(max - min);
+        // In f32: the default ±32767 range spans more than i16 can hold.
+        let span = f32::from(max) - f32::from(min);
         let step = view * (1.0 - OVERLAP);
         let count = (span / step).ceil().max(0.0) as usize + 1;
         (0..count)
@@ -559,8 +630,8 @@ fn scan_grid(camera: &Camera, calibration: &CameraCalibration) -> Vec<(i16, i16)
             })
             .collect::<Vec<_>>()
     };
-    let pans = axis(camera.range.pan_min, camera.range.pan_max, view_pan);
-    let tilts = axis(camera.range.tilt_min, camera.range.tilt_max, view_tilt);
+    let pans = axis(range.pan_min, range.pan_max, view_pan);
+    let tilts = axis(range.tilt_min, range.tilt_max, view_tilt);
     let mut grid = vec![];
     for (row, tilt) in tilts.iter().rev().enumerate() {
         let mut line: Vec<_> = pans.iter().map(|pan| (*pan, *tilt)).collect();
@@ -572,13 +643,29 @@ fn scan_grid(camera: &Camera, calibration: &CameraCalibration) -> Vec<(i16, i16)
     grid
 }
 
+/// `range` capped to what any camera can turn (±180° pan, ±90° tilt); the
+/// default profile allows ±32767 units, about ±2500° on a P100.
+fn physical_range(range: &PtzRange, calibration: &CameraCalibration) -> PtzRange {
+    let cap = |units_per_degree: f32, degrees: f32| {
+        (units_per_degree * degrees).round().min(32767.0) as i16
+    };
+    let pan = cap(calibration.pan_units_per_degree, 180.0);
+    let tilt = cap(calibration.tilt_units_per_degree, 90.0);
+    PtzRange {
+        pan_min: range.pan_min.max(-pan),
+        pan_max: range.pan_max.min(pan),
+        tilt_min: range.tilt_min.max(-tilt),
+        tilt_max: range.tilt_max.min(tilt),
+    }
+}
+
 /// Narrows `min..=max` when a move to `target` stopped well short at `landed`.
 fn discover_limit(min: &mut i16, max: &mut i16, target: i16, landed: i16) {
     // Moves normally land within a unit or two of their target.
     const SHORT: i16 = 16;
-    if landed < target - SHORT {
+    if landed < target.saturating_sub(SHORT) {
         *max = landed;
-    } else if landed > target + SHORT {
+    } else if landed > target.saturating_add(SHORT) {
         *min = landed;
     }
 }
@@ -625,6 +712,8 @@ mod tests {
             ptz_range: None,
             calibration: None,
             soft_limits: None,
+            soft_polygon: None,
+            atem_input: None,
         };
         let camera = Camera {
             device,
@@ -662,7 +751,7 @@ mod tests {
     #[test]
     fn scan_grid_overlaps_neighbouring_frames_and_snakes() {
         let (camera, calibration) = p100();
-        let grid = scan_grid(&camera, &calibration);
+        let grid = scan_grid(&camera.range, &calibration);
         let (view_pan, view_tilt) = calibration.view_units(0);
         let pans: Vec<_> = grid
             .iter()
@@ -714,6 +803,26 @@ mod tests {
         assert_eq!((min, max), (-394, 372));
         discover_limit(&mut min, &mut max, -394, -200);
         assert_eq!((min, max), (-200, 372));
+    }
+
+    #[test]
+    fn default_profile_limits_do_not_overflow() {
+        // The default VISCA profile is ±32767, which spans more than i16 holds.
+        let (_, calibration) = p100();
+        let huge = PtzRange {
+            pan_min: -32767,
+            pan_max: 32767,
+            tilt_min: -32767,
+            tilt_max: 32767,
+        };
+        let capped = physical_range(&huge, &calibration);
+        assert_eq!((capped.pan_max, capped.tilt_min), (2331, -1179));
+        assert!(scan_grid(&capped, &calibration).len() < 100);
+        assert!(!scan_grid(&huge, &calibration).is_empty());
+        let (mut min, mut max) = (-32767, 32767);
+        discover_limit(&mut min, &mut max, 32767, 2216);
+        discover_limit(&mut min, &mut max, -32767, -2216);
+        assert_eq!((min, max), (-2216, 2216));
     }
 
     #[test]

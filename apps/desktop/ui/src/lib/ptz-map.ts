@@ -1,4 +1,9 @@
-import type { CameraCalibration, PanoramaInfo, PtzRange } from "../bindings";
+import type {
+  CameraCalibration,
+  PanoramaInfo,
+  PtzPoint,
+  PtzRange,
+} from "../bindings";
 import { clamp } from "./ptz";
 
 // Map coordinates are "view units": raw camera units flipped so x grows to
@@ -92,7 +97,16 @@ export function mapExtent(
     const b = toView(calibration, panorama.pan_right, panorama.tilt_bottom);
     return { left: a.x, right: b.x, top: a.y, bottom: b.y };
   }
-  const area = rangeRect(calibration, range);
+  // Profile limits default to ±32767, far beyond what a camera can turn, so
+  // cap them at ±180° pan and ±90° tilt.
+  const pan = 180 * calibration.pan_units_per_degree;
+  const tilt = 90 * calibration.tilt_units_per_degree;
+  const area = rangeRect(calibration, {
+    pan_min: Math.max(range.pan_min, -pan),
+    pan_max: Math.min(range.pan_max, pan),
+    tilt_min: Math.max(range.tilt_min, -tilt),
+    tilt_max: Math.min(range.tilt_max, tilt),
+  });
   const { width, height } = viewUnits(calibration, 0);
   return {
     left: area.left - width / 2,
@@ -129,43 +143,147 @@ export function layout(extent: Rect, width: number, height: number) {
   };
 }
 
-/**
- * Moves a target so its visible frame stays inside the soft limits, as the
- * core enforces. If the frame is larger than the limits at this zoom it is
- * centred, and the core will refuse it until zoomed in.
- */
-export function clampToLimits(
-  calibration: CameraCalibration,
-  limits: PtzRange | null | undefined,
-  target: Position,
-): Position {
-  if (!limits) return target;
-  const { width, height } = viewUnits(calibration, target.zoom);
-  const fit = (value: number, half: number, min: number, max: number) =>
-    max - min < half * 2
-      ? Math.round((min + max) / 2)
-      : Math.round(clamp(value, min + half, max - half));
-  return {
-    ...target,
-    pan: fit(target.pan, width / 2, limits.pan_min, limits.pan_max),
-    tilt: fit(target.tilt, height / 2, limits.tilt_min, limits.tilt_max),
+/** Soft limits: a rectangle and/or a polygon, both in raw units. */
+export type Limits = {
+  rect?: PtzRange | null;
+  polygon?: PtzPoint[] | null;
+};
+
+/** Whether an axis-aligned rectangle lies inside a simple polygon; mirrors the core. */
+export function rectInPolygon(
+  [left, right, bottom, top]: [number, number, number, number],
+  polygon: [number, number][],
+) {
+  const inside = ([x, y]: [number, number]) => {
+    let odd = false;
+    polygon.forEach(([x1, y1], i) => {
+      const [x2, y2] = polygon[(i + 1) % polygon.length];
+      if (y1 > y !== y2 > y && x < x1 + ((y - y1) / (y2 - y1)) * (x2 - x1))
+        odd = !odd;
+    });
+    return odd;
   };
+  const corners: [number, number][] = [
+    [left, bottom],
+    [right, bottom],
+    [right, top],
+    [left, top],
+  ];
+  if (!corners.every(inside)) return false;
+  if (polygon.some(([x, y]) => x > left && x < right && y > bottom && y < top))
+    return false;
+  type P = [number, number];
+  const side = (p: P, q: P, r: P) =>
+    (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+  const cross = (a: P, b: P, c: P, d: P) =>
+    side(c, d, a) * side(c, d, b) < 0 && side(a, b, c) * side(a, b, d) < 0;
+  return polygon.every((a, i) => {
+    const b = polygon[(i + 1) % polygon.length];
+    return corners.every((c, k) => !cross(a, b, c, corners[(k + 1) % 4]));
+  });
 }
 
 /** Whether a target's frame fits inside the limits, matching the core. */
 export function withinLimits(
   calibration: CameraCalibration,
-  limits: PtzRange | null | undefined,
+  limits: Limits,
   target: Position,
 ) {
-  if (!limits) return true;
   const { width, height } = viewUnits(calibration, target.zoom);
-  return (
-    target.pan - width / 2 >= limits.pan_min - 0.5 &&
-    target.pan + width / 2 <= limits.pan_max + 0.5 &&
-    target.tilt - height / 2 >= limits.tilt_min - 0.5 &&
-    target.tilt + height / 2 <= limits.tilt_max + 0.5
-  );
+  const frame: [number, number, number, number] = [
+    target.pan - width / 2,
+    target.pan + width / 2,
+    target.tilt - height / 2,
+    target.tilt + height / 2,
+  ];
+  const { rect, polygon } = limits;
+  const inRect =
+    !rect ||
+    (frame[0] >= rect.pan_min - 0.5 &&
+      frame[1] <= rect.pan_max + 0.5 &&
+      frame[2] >= rect.tilt_min - 0.5 &&
+      frame[3] <= rect.tilt_max + 0.5);
+  const inPolygon =
+    !polygon ||
+    rectInPolygon(
+      frame,
+      polygon.map((p) => [p.pan, p.tilt]),
+    );
+  return inRect && inPolygon;
+}
+
+/**
+ * Moves a target so its visible frame stays inside the soft limits, as the
+ * core enforces. A rectangle clamps directly. For a polygon the target moves
+ * to the furthest allowed point on the way from the nearest allowed position;
+ * if nothing fits at this zoom the target is left (and shown) as is.
+ */
+export function clampToLimits(
+  calibration: CameraCalibration,
+  limits: Limits,
+  target: Position,
+): Position {
+  let next = target;
+  if (limits.rect) {
+    const { width, height } = viewUnits(calibration, target.zoom);
+    const fit = (value: number, half: number, min: number, max: number) =>
+      max - min < half * 2
+        ? Math.round((min + max) / 2)
+        : Math.round(clamp(value, min + half, max - half));
+    next = {
+      ...next,
+      pan: fit(next.pan, width / 2, limits.rect.pan_min, limits.rect.pan_max),
+      tilt: fit(
+        next.tilt,
+        height / 2,
+        limits.rect.tilt_min,
+        limits.rect.tilt_max,
+      ),
+    };
+  }
+  if (limits.polygon?.length && !withinLimits(calibration, limits, next)) {
+    // A concave polygon's vertex average can be outside it, so anchor on the
+    // allowed position nearest the target from a grid over the polygon, then
+    // slide from there towards the target as far as is allowed.
+    const pans = limits.polygon.map((p) => p.pan);
+    const tilts = limits.polygon.map((p) => p.tilt);
+    const [left, right] = [Math.min(...pans), Math.max(...pans)];
+    const [bottom, top] = [Math.min(...tilts), Math.max(...tilts)];
+    let anchor: Position | null = null;
+    let nearest = Infinity;
+    const steps = 24;
+    for (let i = 0; i <= steps; i++) {
+      for (let j = 0; j <= steps; j++) {
+        const probe = {
+          ...next,
+          pan: Math.round(left + ((right - left) * i) / steps),
+          tilt: Math.round(bottom + ((top - bottom) * j) / steps),
+        };
+        const distance = Math.hypot(
+          probe.pan - next.pan,
+          probe.tilt - next.tilt,
+        );
+        if (distance < nearest && withinLimits(calibration, limits, probe)) {
+          anchor = probe;
+          nearest = distance;
+        }
+      }
+    }
+    if (!anchor) return next;
+    let [low, high] = [0, 1];
+    const along = (t: number) => ({
+      ...next,
+      pan: Math.round(anchor.pan + (next.pan - anchor.pan) * t),
+      tilt: Math.round(anchor.tilt + (next.tilt - anchor.tilt) * t),
+    });
+    for (let step = 0; step < 16; step++) {
+      const mid = (low + high) / 2;
+      if (withinLimits(calibration, limits, along(mid))) low = mid;
+      else high = mid;
+    }
+    next = along(low);
+  }
+  return next;
 }
 
 /** A raw-unit range from two view-unit corners, e.g. a dragged rectangle. */

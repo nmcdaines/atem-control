@@ -66,6 +66,19 @@ describe("calibrated PTZ map", () => {
     expect(frame.right - frame.left).toBeCloseTo(viewUnits(p100, 0).width);
   });
 
+  it("caps an unscanned map at what a camera can physically turn", () => {
+    const huge = {
+      pan_min: -32767,
+      pan_max: 32767,
+      tilt_min: -32767,
+      tilt_max: 32767,
+    };
+    const extent = mapExtent(p100, huge);
+    const half = viewUnits(p100, 0);
+    expect(extent.right).toBeCloseTo(180 * 12.95 + half.width / 2);
+    expect(extent.top).toBeCloseTo(90 * 12.57 + half.height / 2);
+  });
+
   it("mirrors the view when the camera's directions are reversed", () => {
     const mirrored = { ...p100, pan_direction: -1 };
     const extent = mapExtent(mirrored, range);
@@ -81,15 +94,42 @@ describe("calibrated PTZ map", () => {
       tilt_min: -300,
       tilt_max: 300,
     };
-    const wide = clampToLimits(p100, limits, { pan: 900, tilt: 0, zoom: 0 });
-    expect(withinLimits(p100, limits, wide)).toBe(true);
+    const wide = clampToLimits(
+      p100,
+      { rect: limits },
+      { pan: 900, tilt: 0, zoom: 0 },
+    );
+    expect(withinLimits(p100, { rect: limits }, wide)).toBe(true);
     expect(wide.pan).toBeLessThan(900);
     // Zoomed in, the requested centre already fits.
     const tele = { pan: 900, tilt: 0, zoom: 16384 };
-    expect(clampToLimits(p100, limits, tele)).toEqual(tele);
-    expect(withinLimits(p100, limits, { pan: 900, tilt: 0, zoom: 0 })).toBe(
-      false,
-    );
+    expect(clampToLimits(p100, { rect: limits }, tele)).toEqual(tele);
+    expect(
+      withinLimits(p100, { rect: limits }, { pan: 900, tilt: 0, zoom: 0 }),
+    ).toBe(false);
+  });
+
+  it("keeps targets' frames inside a concave polygon", () => {
+    // An L shape: the top-right quarter is excluded.
+    const point = (pan: number, tilt: number) => ({ pan, tilt });
+    const limits = {
+      polygon: [
+        point(-1500, -400),
+        point(1500, -400),
+        point(1500, 0),
+        point(0, 0),
+        point(0, 400),
+        point(-1500, 400),
+      ],
+    };
+    const tele = (pan: number, tilt: number) => ({ pan, tilt, zoom: 16384 });
+    expect(withinLimits(p100, limits, tele(-500, 200))).toBe(true);
+    expect(withinLimits(p100, limits, tele(500, -200))).toBe(true);
+    expect(withinLimits(p100, limits, tele(500, 200))).toBe(false);
+    // Aiming into the excluded quarter slides back towards the centre.
+    const held = clampToLimits(p100, limits, tele(800, 300));
+    expect(withinLimits(p100, limits, held)).toBe(true);
+    expect(held.pan).toBeLessThan(800);
   });
 
   it("builds a limit range from dragged corners in any direction", () => {

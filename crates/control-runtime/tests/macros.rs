@@ -204,3 +204,29 @@ async fn camera_pan(app: &Controller) -> i16 {
         .find(|d| d.device_id == "demo-camera");
     camera.unwrap().camera.as_ref().unwrap().pan
 }
+
+#[tokio::test]
+async fn scans_are_refused_while_the_camera_is_on_air() {
+    let (_dir, app) = app().await;
+    let mut config = demo_config();
+    config
+        .devices
+        .iter_mut()
+        .find(|d| d.id == "demo-camera")
+        .unwrap()
+        .atem_input = Some(3);
+    app.save_config(config).await.unwrap();
+    app.execute("demo-atem", Command::SetProgram { input: 3 })
+        .await
+        .unwrap();
+    let error = app.scan_camera("demo-camera").await.unwrap_err();
+    assert!(error.to_string().contains("on air"), "{error}");
+    let error = app.calibrate_camera("demo-camera").await.unwrap_err();
+    assert!(error.to_string().contains("on air"), "{error}");
+    // Off air, the job gets past this check (the simulator lacks VISCA).
+    app.execute("demo-atem", Command::SetProgram { input: 1 })
+        .await
+        .unwrap();
+    let error = app.scan_camera("demo-camera").await.unwrap_err();
+    assert!(error.to_string().contains("VISCA"), "{error}");
+}

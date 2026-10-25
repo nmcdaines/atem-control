@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Status } from "@/components/status";
+import { TallyBadge } from "@/components/tally-badge";
+import { tally } from "@/lib/tally";
 import { clamp } from "@/lib/ptz";
 import { api } from "@/api";
 import { kind } from "@/editor";
@@ -108,6 +110,7 @@ export function DeviceDock({
             >
               <span className="truncate">{device.name}</span>
               <span className="flex shrink-0 items-center gap-2">
+                <TallyBadge tally={tally(device, snapshot)} />
                 <Status
                   state={state}
                   simulated={device.connection.type === "simulation"}

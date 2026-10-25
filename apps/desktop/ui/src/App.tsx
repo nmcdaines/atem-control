@@ -36,8 +36,12 @@ import { Notice } from "@/components/notice";
 import { Combobox } from "@/components/combobox";
 import { NdiSourceField } from "@/components/ndi-source-field";
 import { useNdiPreview } from "@/lib/use-ndi-preview";
+import { tally } from "@/lib/tally";
+import type { Tally } from "@/lib/tally";
+import { TallyBadge } from "@/components/tally-badge";
 import { useLiveCamera, usePanorama } from "@/lib/use-camera-map";
 import { PtzMap } from "@/components/ptz-map";
+import type { Limits } from "@/lib/ptz-map";
 import { Status } from "@/components/status";
 import { DeviceDock, homeCamera } from "@/components/device-dock";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -53,7 +57,6 @@ import type {
   Macro,
   NdiSnapshot,
   PanoramaInfo,
-  PtzRange,
   Snapshot,
   Step,
 } from "./bindings";
@@ -114,6 +117,38 @@ function NumberField({
         max={max}
         step={step}
         onChange={(event) => onChange(Number(event.target.value))}
+      />
+    </Label>
+  );
+}
+function NumberFieldOptional({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value?: number;
+  onChange: (value: number | undefined) => void;
+}) {
+  return (
+    <Label className="my-3 grid items-stretch gap-2 leading-normal">
+      {label}
+      <Input
+        type="number"
+        min={0}
+        max={65535}
+        placeholder="Not connected to a switcher"
+        value={value ?? ""}
+        onChange={(event) =>
+          onChange(
+            event.target.value === ""
+              ? undefined
+              : Math.max(
+                  0,
+                  Math.min(65535, Math.round(Number(event.target.value))),
+                ),
+          )
+        }
       />
     </Label>
   );
@@ -642,6 +677,7 @@ function Cameras({
             config={snapshot.config}
             ndi={snapshot.ndi}
             panorama={snapshot.panoramas.find((p) => p.device_id === device.id)}
+            tally={tally(device, snapshot)}
             running={!!snapshot.runs.find((run) => run.status === "running")}
             disabled={disabled}
             task={task}
@@ -658,6 +694,7 @@ function Camera({
   config,
   ndi,
   panorama,
+  tally,
   running,
   disabled,
   task,
@@ -668,6 +705,7 @@ function Camera({
   config: Config;
   ndi: NdiSnapshot;
   panorama?: PanoramaInfo;
+  tally: Tally;
   running: boolean;
   disabled: boolean;
   task: Task;
@@ -704,13 +742,17 @@ function Camera({
     tilt_min: -tl,
     tilt_max: tl,
   };
-  const saveLimits = (soft_limits: PtzRange | null) =>
+  const saveLimits = ({ rect, polygon }: Limits) =>
     void task(() =>
       save({
         ...config,
         devices: config.devices.map((d) =>
           d.id === device.id
-            ? { ...d, soft_limits: soft_limits ?? undefined }
+            ? {
+                ...d,
+                soft_limits: rect ?? undefined,
+                soft_polygon: polygon ?? undefined,
+              }
             : d,
         ),
       }),
@@ -749,10 +791,13 @@ function Camera({
           <span className="eyebrow">PTZ CONTROL</span>
           <h2>{device.name}</h2>
         </div>
-        <Status
-          state={state}
-          simulated={device.connection.type === "simulation"}
-        />
+        <div className="flex items-center gap-2">
+          <TallyBadge tally={tally} />
+          <Status
+            state={state}
+            simulated={device.connection.type === "simulation"}
+          />
+        </div>
       </CardHeader>
       {state?.error && <Notice>{state.error}</Notice>}
       {device.calibration && (
@@ -769,7 +814,7 @@ function Camera({
             target={target}
             onChange={(position) => setTarget({ ...target, ...position })}
             preview={preview.frame}
-            limits={device.soft_limits}
+            limits={{ rect: device.soft_limits, polygon: device.soft_polygon }}
             onSaveLimits={saveLimits}
             zoomLimit={zl}
             disabled={disabled}
@@ -793,6 +838,7 @@ function Camera({
               device={device}
               panorama={panorama}
               ndiAvailable={ndi.available}
+              onAir={tally === "program"}
               disabled={disabled || running}
               task={task}
             />
@@ -986,12 +1032,14 @@ function CameraSurvey({
   device,
   panorama,
   ndiAvailable,
+  onAir,
   disabled,
   task,
 }: {
   device: Device;
   panorama?: PanoramaInfo;
   ndiAvailable: boolean;
+  onAir: boolean;
   disabled: boolean;
   task: Task;
 }) {
@@ -1017,6 +1065,7 @@ function CameraSurvey({
             ? `Scanned ${age === 0 ? "just now" : `${age} min ago`} from ${panorama.tiles} frames.`
             : "Not scanned yet. A scan sweeps the camera's whole range (about 2 minutes) and then returns it."}
         {!ndiAvailable && " Needs the NDI runtime."}
+        {onAir && " The camera is on air; cut away before moving it."}
       </p>
       {confirming ? (
         <div className="button-row mt-3">
@@ -1037,14 +1086,14 @@ function CameraSurvey({
         <div className="button-row mt-3">
           <Button
             variant="outline"
-            disabled={disabled || !ndiAvailable}
+            disabled={disabled || !ndiAvailable || onAir}
             onClick={() => setConfirming("calibrate")}
           >
             {device.calibration ? "Recalibrate" : "Calibrate"}
           </Button>
           <Button
             variant="outline"
-            disabled={disabled || !ndiAvailable || !device.calibration}
+            disabled={disabled || !ndiAvailable || onAir || !device.calibration}
             onClick={() => setConfirming("scan")}
           >
             {panorama ? "Rescan panorama" : "Scan panorama"}
@@ -1862,7 +1911,11 @@ function Devices({
                     ...config.devices.filter((d) => d.id !== editing.id),
                     kind(editing) === "camera"
                       ? editing
-                      : { ...editing, ndi_source: undefined },
+                      : {
+                          ...editing,
+                          ndi_source: undefined,
+                          atem_input: undefined,
+                        },
                   ],
                 });
                 setEditing(undefined);
@@ -2074,6 +2127,15 @@ function Devices({
                   )}
                 </div>
               </>
+            )}
+            {kind(editing) === "camera" && (
+              <NumberFieldOptional
+                label="Switcher input (shows on-air status)"
+                value={editing.atem_input}
+                onChange={(atem_input) =>
+                  setEditing({ ...editing, atem_input })
+                }
+              />
             )}
             {kind(editing) === "camera" &&
               editing.connection.type !== "ndi" && (

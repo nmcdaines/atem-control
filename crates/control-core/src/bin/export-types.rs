@@ -24,6 +24,7 @@ fn main() {
         DeviceState::decl(&cfg),
         RunStatus::decl(&cfg),
         Run::decl(&cfg),
+        PtzPoint::decl(&cfg),
         PtzRange::decl(&cfg),
         FocalSample::decl(&cfg),
         CameraCalibration::decl(&cfg),
