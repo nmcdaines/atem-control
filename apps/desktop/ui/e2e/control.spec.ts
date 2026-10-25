@@ -371,6 +371,13 @@ test("PTZ sliders and canvas edit a draft until movement and zoom are applied", 
   await expect.poll(camera).toEqual({ pan: 100, tilt: -32767, zoom: 16384 });
   await page.getByRole("button", { name: "Tilt only", exact: true }).click();
   await expect.poll(camera).toEqual({ pan: 100, tilt: 200, zoom: 16384 });
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await expect.poll(camera).toEqual({ pan: 0, tilt: 0, zoom: 0 });
+  await expect(page.getByLabel("Target pan", { exact: true })).toHaveValue("0");
+  await page.getByRole("slider", { name: "Target zoom", exact: true }).focus();
+  await page
+    .getByRole("slider", { name: "Target zoom", exact: true })
+    .press("End");
   const targetZoom = () =>
     page
       .getByRole("slider", { name: "Target zoom", exact: true })

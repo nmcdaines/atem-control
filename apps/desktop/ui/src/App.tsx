@@ -762,6 +762,25 @@ function Camera({
               Read position
             </Button>
             <Button
+              disabled={disabled}
+              onClick={() => {
+                setTarget({ ...target, pan: 0, tilt: 0, zoom: 0 });
+                void task(async () => {
+                  await api.execute(device.id, {
+                    type: "pan_tilt",
+                    pan: 0,
+                    tilt: 0,
+                    pan_speed: target.pan_speed,
+                    tilt_speed: target.tilt_speed,
+                  });
+                  await api.execute(device.id, { type: "zoom", position: 0 });
+                });
+              }}
+              variant="outline"
+            >
+              Home
+            </Button>
+            <Button
               disabled={!current}
               onClick={() => current && setTarget({ ...target, ...current })}
               variant="outline"
